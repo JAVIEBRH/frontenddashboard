@@ -1,0 +1,131 @@
+/* Estilos para el calendario funcional */
+.functional-calendar {
+  width: 100% !important;
+  max-width: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  font-family: inherit !important;
+}
+
+.functional-calendar .react-calendar__navigation {
+  display: flex !important;
+  margin-bottom: 1rem !important;
+}
+
+.functional-calendar .react-calendar__navigation button {
+  background: none !important;
+  border: none !important;
+  padding: 8px 12px !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.functional-calendar .react-calendar__navigation button:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.functional-calendar .react-calendar__navigation button:disabled {
+  color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+}
+
+.functional-calendar .react-calendar__navigation__label {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #6366f1 !important;
+  text-transform: capitalize !important;
+}
+
+.functional-calendar .react-calendar__month-view__weekdays {
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin-bottom: 8px !important;
+}
+
+.functional-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 8px 0 !important;
+  text-align: center !important;
+}
+
+.functional-calendar .react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 2px !important;
+}
+
+.functional-calendar .react-calendar__tile {
+  background: none !important;
+  border: none !important;
+  padding: 8px 4px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  height: 60px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.functional-calendar .react-calendar__tile:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.functional-calendar .react-calendar__tile--active {
+  background-color: #6366f1 !important;
+  color: white !important;
+}
+
+.functional-calendar .react-calendar__tile--now {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+.functional-calendar .react-calendar__tile--disabled {
+  color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+}
+
+.functional-calendar .react-calendar__tile--neighboringMonth {
+  color: #94a3b8 !important;
+}
+
+/* Estilos para días con eventos */
+.calendar-has-events {
+  background-color: #f0f9ff !important;
+  border: 2px solid #3b82f6 !important;
+  font-weight: 600 !important;
+}
+
+.calendar-has-events:hover {
+  background-color: #dbeafe !important;
+}
+
+/* Indicadores de eventos */
+.event-indicator {
+  position: absolute !important;
+  bottom: 4px !important;
+  right: 4px !important;
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: #3b82f6 !important;
+}
+
+.event-indicator.task {
+  background-color: #3b82f6 !important;
+}
+
+.event-indicator.message {
+  background-color: #f59e0b !important;
+} 

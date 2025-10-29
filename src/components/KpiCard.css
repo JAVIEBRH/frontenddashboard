@@ -1,0 +1,262 @@
+.kpi-card, .kpi-card.big, .kpi-card.kpi-panel-objetivos, .kpi-card.kpi-litros-vendidos, .kpi-card.kpi-pedidos-bloque {
+  background: rgba(40, 48, 72, 0.85);
+  border-radius: 18px;
+  padding: 28px 24px 24px 24px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(102, 126, 234, 0.18);
+  transition: box-shadow 0.2s;
+}
+
+.kpi-card.big {
+  min-width: 260px;
+  min-height: 180px;
+}
+
+.kpi-header .kpi-icon {
+  background: linear-gradient(135deg, #38bdf8 0%, #667eea 100%);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.kpi-title {
+  color: #a5b4fc;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi-value-main {
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.kpi-desc {
+  color: #bfc9e0;
+  font-size: 1rem;
+  margin-top: 8px;
+}
+
+.kpi-change.negative {
+  color: #7c2d12;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.kpi-change.positive {
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.progress-bar-visual {
+  width: 100%;
+  height: 14px;
+  background: #232946;
+  border-radius: 8px;
+  margin: 10px 0 0 0;
+  overflow: hidden;
+  border: 1px solid #3b82f6;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #667eea 100%);
+  border-radius: 8px;
+}
+
+/* --- KPI CARDS UNIFICADOS --- */
+.ventas-card,
+.iva-card,
+.utilidad-card {
+  background: #fff !important;
+  border-radius: 22px;
+  box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08) !important;
+  border: 1.5px solid #e5e7eb !important;
+  padding: 24px 20px 18px 20px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+.ventas-card *,
+.iva-card *,
+.utilidad-card * {
+  color: #222 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.kpi-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.kpi-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+  text-transform: none;
+  letter-spacing: 0.2px;
+}
+.kpi-card-badge {
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  margin-left: 8px;
+  margin-top: 0;
+  margin-bottom: 0;
+  display: inline-block;
+}
+.ventas-badge {
+  background: #10b981 !important;
+  color: #fff !important;
+}
+.iva-badge {
+  background: #f9b87a !important;
+  color: #fff !important;
+}
+.utilidad-badge {
+  background: #7a7af9 !important;
+  color: #fff !important;
+}
+.kpi-card-value {
+  color: #222;
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin: 10px 0 0 0;
+  width: 100%;
+}
+.kpi-card-sub {
+  color: #444;
+  font-size: 1.15rem;
+  margin-bottom: 10px;
+  width: 100%;
+}
+.iva-sub {
+  font-style: italic;
+}
+.kpi-card-chart {
+  margin: 10px 0 0 0;
+  text-align: center;
+  width: 100%;
+}
+.kpi-card-desc {
+  color: #444;
+  font-size: 1.15rem;
+  margin-top: 8px;
+  text-align: center;
+  width: 100%;
+}
+
+/* --- BIDONES CARD --- */
+.bidones-card {
+  background: #fff !important;
+  color: #222 !important;
+  border-radius: 22px;
+  box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
+  border: 1.5px solid #e5e7eb;
+  padding: 24px 20px 18px 20px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.bidones-card * {
+  color: #222 !important;
+  background: transparent !important;
+}
+.bidones-value {
+  color: #222;
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin: 10px 0 0 0;
+}
+.bidones-sub {
+  color: #444;
+  font-size: 1.15rem;
+  margin-bottom: 10px;
+}
+.bidones-chart {
+  margin: 10px 0 0 0;
+  text-align: center;
+  width: 100%;
+}
+.bidones-desc {
+  color: #444;
+  font-size: 1.15rem;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* --- PREDICCIÓN CARD --- */
+.prediccion-card {
+  background: #fff !important;
+  color: #222 !important;
+  border-radius: 22px;
+  box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
+  border: 1.5px solid #e5e7eb;
+  padding: 24px 20px 18px 20px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.prediccion-card * {
+  color: #222 !important;
+  background: transparent !important;
+}
+.verde-badge {
+  background: #22c55e !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-radius: 12px;
+  padding: 2px 16px;
+  margin-left: 10px;
+  display: inline-block;
+}
+.rojo-badge {
+  background: #7c2d12 !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 1.1rem;
+  border-radius: 12px;
+  padding: 2px 16px;
+  margin-left: 10px;
+  display: inline-block;
+}
+
+@media (max-width: 900px) {
+  .kpi-card.big {
+    min-width: unset;
+    min-height: 140px;
+    padding: 18px 10px 16px 10px;
+  }
+}
+
+/* --- GLOW AZUL CLARO PARA KPI META --- */
+.kpi-glow {
+  animation: glowPulse 3s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.2);
+  }
+} 

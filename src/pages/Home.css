@@ -1,0 +1,249 @@
+/* Variables CSS para temas mejoradas */
+:root {
+  --bg-primary: #fafbfc;
+  --bg-secondary: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --shadow-light: rgba(0, 0, 0, 0.06);
+  --shadow-medium: rgba(0, 0, 0, 0.12);
+  --shadow-heavy: rgba(0, 0, 0, 0.18);
+  --scrollbar-track: #f8fafc;
+  --scrollbar-thumb: #d1d5db;
+  --scrollbar-thumb-hover: #9ca3af;
+  --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%);
+  --card-border: rgba(0,0,0,0.08);
+}
+
+/* Tema oscuro mejorado */
+[data-mui-color-scheme="dark"] {
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --border-color: #2d2d2d;
+  --shadow-light: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.35);
+  --shadow-heavy: rgba(0, 0, 0, 0.45);
+  --scrollbar-track: #1f1f1f;
+  --scrollbar-thumb: #404040;
+  --scrollbar-thumb-hover: #525252;
+  --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  --card-border: rgba(255,255,255,0.08);
+}
+
+.home-container {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 20px;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: auto;
+  padding-top: 120px; /* Espacio para el header fijo */
+}
+
+.home-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 10px var(--shadow-light);
+  backdrop-filter: blur(10px);
+}
+
+.home-header h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-header p {
+  margin: 8px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Estilos para las cards arrastrables */
+.draggable-card {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.draggable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px var(--shadow-medium);
+}
+
+.draggable-card:active {
+  cursor: grabbing;
+  transform: scale(1.02);
+}
+
+.draggable-card.dragging {
+  z-index: 1000;
+  transform: scale(1.02);
+  box-shadow: 0 12px 40px var(--shadow-heavy);
+}
+
+/* Handle de redimensionamiento */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nw-resize;
+  background: var(--shadow-light);
+  border-radius: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.2s ease;
+}
+
+.resize-handle:hover {
+  background: var(--shadow-medium);
+}
+
+/* Grid para cards compactos */
+.compact-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  height: 100%;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px var(--shadow-light);
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .home-container {
+    padding: 10px;
+    padding-top: 100px;
+  }
+  
+  .home-header {
+    padding: 15px;
+  }
+  
+  .home-header h1 {
+    font-size: 2rem;
+  }
+  
+  .home-header p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-container {
+    padding-top: 80px;
+  }
+  
+  .home-header {
+    padding: 10px;
+  }
+  
+  .home-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .home-header p {
+    font-size: 0.9rem;
+  }
+}
+
+/* Animaciones mejoradas para las cards */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.draggable-card {
+  animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.draggable-card:hover {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Efectos de hover mejorados */
+.draggable-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.draggable-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px var(--shadow-medium);
+}
+
+.draggable-card:active {
+  transform: translateY(-2px) scale(1.01);
+  transition: all 0.1s ease;
+}
+
+/* Estilos para el scroll */
+.home-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.home-container::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 4px;
+}
+
+.home-container::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+.home-container::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+} 

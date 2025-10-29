@@ -1,0 +1,120 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 240px;
+  background: #fff;
+  box-shadow: 2px 0 16px 0 rgba(30, 42, 80, 0.07);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 48px;
+  gap: 8px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  color: #333;
+  text-decoration: none;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-link:hover {
+  background: #e8f0fe;
+  color: #2563eb;
+}
+
+.sidebar-link.active {
+  background: #e3edfa;
+  color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(37, 99, 235, 0.07);
+}
+
+.sidebar-icon {
+  font-size: 1.5rem;
+  min-width: 24px;
+  color: inherit;
+}
+
+/* Estilos para el botón de actualización */
+.sidebar-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  color: #333;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  margin-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-refresh-btn:hover:not(:disabled) {
+  background: #f0f9ff;
+  color: #059669;
+}
+
+.sidebar-refresh-btn:active:not(:disabled) {
+  background: #ecfdf5;
+}
+
+.sidebar-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Animación de rotación para el ícono */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sidebar-icon.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+/* Estado de refreshing */
+.sidebar-refresh-btn.refreshing {
+  background: #f0f9ff;
+  color: #059669;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 64px;
+  }
+  .sidebar-link span {
+    display: none;
+  }
+  .sidebar-link {
+    justify-content: center;
+    padding: 14px 0;
+  }
+  .sidebar-refresh-btn span {
+    display: none;
+  }
+  .sidebar-refresh-btn {
+    justify-content: center;
+    padding: 14px 0;
+  }
+} 
