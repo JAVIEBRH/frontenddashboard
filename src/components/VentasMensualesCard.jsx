@@ -79,10 +79,12 @@ const VentasMensualesCard = ({
       }
       
       setVentasData({
-        ventas_mes_actual: ventasActual,
+        // Fuente de verdad desde KPIs (prop "value")
+        ventas_mes_actual: value,
         ventas_mes_anterior: ventasAnterior,
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio >= 0,
+        // Usar la varianza matemática entregada por el padre (KPIs)
+        porcentaje_cambio: percentageChange,
+        es_positivo: isPositive,
         tendencia_mensual: tendenciaMensual,
         fecha_analisis: hoy.toISOString()
       });

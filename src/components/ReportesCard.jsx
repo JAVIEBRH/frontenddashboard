@@ -168,7 +168,7 @@ const ReportesCard = () => {
 
         {/* Métricas Principales Compactas */}
         <Grid container spacing={1} sx={{ mb: 2 }}>
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'rgba(59, 130, 246, 0.1)', borderRadius: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, color: '#3b82f6', fontSize: '1.1rem' }}>
                 ${reporteData.metricas?.ventas_semana?.toLocaleString() || 0}
@@ -179,7 +179,7 @@ const ReportesCard = () => {
             </Box>
           </Grid>
           
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'rgba(5, 150, 105, 0.1)', borderRadius: 1 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, color: '#059669', fontSize: '1.1rem' }}>
                 {reporteData.metricas?.pedidos_semana || 0}

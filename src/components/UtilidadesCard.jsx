@@ -51,7 +51,7 @@ const UtilidadesCard = ({
         return mesNumero === mesAnterior && item.ventas > 0;
       });
       
-      // Calcular utilidades: ventas - costos (costos = 60% de ventas)
+      // Calcular utilidades: ventas - costos (costos = 60% de ventas) SOLO para tendencia/mes anterior
       const ventasActual = ventasMesActual?.ventas || 0;
       const ventasAnterior = ventasMesAnterior?.ventas || 0;
       
@@ -90,10 +90,12 @@ const UtilidadesCard = ({
       }
       
       setUtilidadesData({
-        utilidades_mes_actual: utilidadesActual,
+        // Mantener el valor real entregado por KPIs (prop "value")
+        utilidades_mes_actual: value,
         utilidades_mes_anterior: utilidadesAnterior,
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio >= 0,
+        // Usar el porcentaje proveniente de KPIs para coherencia global
+        porcentaje_cambio: percentageChange,
+        es_positivo: isPositive,
         tendencia_mensual: tendenciaMensual,
         fecha_analisis: hoy.toISOString()
       });

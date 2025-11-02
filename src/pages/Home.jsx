@@ -113,31 +113,101 @@ export default function Home() {
     return Math.min(100, Math.round((utilizada / total) * 100));
   };
 
-  const fetchData = async () => {
+  const fetchData = async (isInitialLoad = false) => {
     try {
-      console.log('🔄 Iniciando fetchData en Home...');
-      setLoading(true);
+      console.log('🔄 Iniciando fetchData en Home...', { isInitialLoad });
+      // Solo poner loading: true en la carga inicial
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        // Para actualizaciones automáticas, solo mostrar indicador de refresh
+        setIsRefreshing(true);
+      }
       setError(null);
 
-      // Obtener datos de KPIs
-      console.log('📊 Obteniendo KPIs...');
+      // CARGA PROGRESIVA: Primero obtener KPIs (datos críticos para mostrar)
+      console.log('📊 Obteniendo KPIs (carga prioritaria)...');
       const kpisData = await getKpis();
       console.log('✅ KPIs obtenidos:', kpisData);
+      
+      // Mostrar datos principales inmediatamente si es carga inicial
+      if (isInitialLoad && kpisData) {
+        // Calcular y mostrar datos básicos con solo KPIs
+        const ventasSemanales = calcularVentasSemanales(kpisData.ventas_mes || 0);
+        const ventasDiarias = Math.round((kpisData.ventas_mes || 0) / 30);
+        const meta = calcularMeta(kpisData.ventas_mes_pasado || 0);
+        const progresoMeta = calcularProgresoMeta(kpisData.ventas_mes || 0, meta);
+        const ticketPromedio = calcularTicketPromedio(kpisData.ventas_mes || 0, kpisData.total_pedidos_mes || 0);
+        const litrosVendidos = kpisData.litros_vendidos || 0;
+        const capacidadTotal = 30000;
+        const porcentajeCapacidad = calcularPorcentajeCapacidad(litrosVendidos, capacidadTotal);
+        const bidonesMesPasado = Math.round((kpisData.litros_vendidos_mes_pasado || 0) / 20);
+        const costosMesPasado = 260000 + (bidonesMesPasado * 60.69);
+        const clientesInactivos = Math.max(0, Math.round((kpisData.clientes_activos || 0) * 0.2));
+        
+        const hoy = new Date();
+        const diasActuales = hoy.getDate();
+        const diasAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate();
+        const pedidosMesPasadoProyectado = (kpisData.total_pedidos_mes_pasado || 0) / diasAnterior * diasActuales;
+        const porcentajeCambioProyectado = calcularPorcentajeCambioProyectado(
+          kpisData.total_pedidos_mes || 0,
+          kpisData.total_pedidos_mes_pasado || 0,
+          diasActuales,
+          diasAnterior
+        );
+        
+        // Actualizar estado con datos básicos para mostrar contenido rápidamente
+        setData(prev => ({
+          ...prev,
+          ventas: kpisData.ventas_mes || 0,
+          pedidos: kpisData.total_pedidos_mes || 0,
+          clientes: kpisData.clientes_activos || 0,
+          litros: litrosVendidos,
+          ventasMensuales: kpisData.ventas_mes || 0,
+          ventasSemanales: ventasSemanales,
+          ventasDiarias: ventasDiarias,
+          bidones: Math.round((kpisData.total_litros_mes || 0) / 20),
+          iva: kpisData.iva || 0,
+          costos: kpisData.costos_reales || 0,
+          costosMesPasado: costosMesPasado,
+          utilidades: kpisData.utilidad || 0,
+          meta: progresoMeta,
+          ticketPromedio: ticketPromedio,
+          clientesActivos: kpisData.clientes_activos || 0,
+          pedidosMes: kpisData.total_pedidos_mes || 0,
+          clientesInactivos: clientesInactivos,
+          ventasMesPasado: kpisData.ventas_mes_pasado || 0,
+          pedidosMesPasado: kpisData.total_pedidos_mes_pasado || 0,
+          capacidadUtilizada: porcentajeCapacidad,
+          litrosVendidos: litrosVendidos,
+          capacidadTotal: capacidadTotal,
+          bidonesMesPasado: bidonesMesPasado,
+          ivaMesPasado: kpisData.iva_mes_pasado || 0,
+          utilidadesMesPasado: kpisData.utilidad_mes_pasado || 0,
+          ticketPromedioMesPasado: kpisData.ticket_promedio_mes_pasado || 0,
+          clientesActivosMesPasado: kpisData.clientes_activos_mes_pasado || 0,
+          clientesInactivosMesPasado: kpisData.clientes_inactivos_mes_pasado || 0,
+          porcentajeCambioProyectado: porcentajeCambioProyectado,
+          esPositivoProyectado: (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado
+        }));
+        
+        // Ocultar loading después de mostrar datos básicos
+        setLoading(false);
+      }
 
-      // Obtener pedidos para cálculos adicionales
-      console.log('📋 Obteniendo pedidos...');
-      const pedidosData = await getPedidos();
-      console.log('✅ Pedidos obtenidos:', pedidosData.length, 'registros');
-
-      // Obtener ventas históricas para el gráfico
-      console.log('📈 Obteniendo ventas históricas...');
-      const ventasHistoricas = await getVentasHistoricas();
-      console.log('✅ Ventas históricas obtenidas:', ventasHistoricas.length, 'registros');
-
-      // Obtener ventas totales históricas
-      console.log('💰 Obteniendo ventas totales históricas...');
-      const ventasTotalesHistoricas = await getVentasTotalesHistoricas();
-      console.log('✅ Ventas totales históricas obtenidas:', ventasTotalesHistoricas);
+      // CARGAR DATOS ADICIONALES EN PARALELO (no bloquean la UI)
+      console.log('📋 Cargando datos adicionales en paralelo...');
+      const [pedidosData, ventasHistoricas, ventasTotalesHistoricas] = await Promise.all([
+        getPedidos().catch(err => { console.warn('Error obteniendo pedidos:', err); return []; }),
+        getVentasHistoricas().catch(err => { console.warn('Error obteniendo ventas históricas:', err); return []; }),
+        getVentasTotalesHistoricas().catch(err => { console.warn('Error obteniendo ventas totales históricas:', err); return { ventas_totales: 0 }; })
+      ]);
+      
+      console.log('✅ Datos adicionales obtenidos:', {
+        pedidos: pedidosData.length,
+        ventasHistoricas: ventasHistoricas.length,
+        ventasTotalesHistoricas
+      });
 
       // CALCULAR VENTAS DE HOY - VERSIÓN SIMPLIFICADA
       const fechaActual = new Date();
@@ -209,11 +279,12 @@ export default function Home() {
       console.log('Es positivo:', (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado);
       console.log('=== FIN DEBUG PEDIDOS ===');
 
-      console.log('🔄 Actualizando estado con datos procesados...');
-      // Actualizar estado con datos reales
-      setData({
-        ventas: kpisData.ventas_mes || 0,
-        ventasTotalesHistoricas: ventasTotalesHistoricas.ventas_totales || 0,
+      console.log('🔄 Actualizando estado con datos completos...');
+      // Actualizar estado con datos completos (incluyendo pedidos y gráficos)
+      // Si es carga inicial, ya actualizamos antes, solo agregamos campos adicionales
+      setData(prev => ({
+        ...prev, // Mantener datos previos (ya establecidos en carga inicial)
+        ventasTotalesHistoricas: ventasTotalesHistoricas.ventas_totales || prev.ventasTotalesHistoricas || 0,
         pedidos: kpisData.total_pedidos_mes || 0,
         clientes: kpisData.clientes_activos || 0,
         eficiencia: 94.2, // Mantener valor fijo por ahora
@@ -246,8 +317,11 @@ export default function Home() {
         clientesActivosMesPasado: kpisData.clientes_activos_mes_pasado || 0,
         clientesInactivosMesPasado: kpisData.clientes_inactivos_mes_pasado || 0,
         porcentajeCambioProyectado: porcentajeCambioProyectado,
-        esPositivoProyectado: (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado
-      });
+        esPositivoProyectado: (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado,
+        // Actualizar campos que dependen de pedidos y datos históricos
+        ventasTotalesHistoricas: ventasTotalesHistoricas.ventas_totales || prev.ventasTotalesHistoricas || 0,
+        ventasHistoricas: ventasHistoricas.length > 0 ? ventasHistoricas : prev.ventasHistoricas || []
+      }));
 
       // Log de depuración para costos
       console.log('=== DEBUG COSTOS ===');
@@ -262,8 +336,10 @@ export default function Home() {
     } catch (err) {
       console.error('❌ Error obteniendo datos:', err);
       setError('Error al cargar los datos del dashboard');
-    } finally {
       setLoading(false);
+      setIsRefreshing(false);
+    } finally {
+      setIsRefreshing(false); // Limpiar el estado de refresh (loading ya se maneja arriba)
       console.log('🏁 fetchData finalizado');
     }
   };
@@ -271,24 +347,26 @@ export default function Home() {
   // Función para actualización manual
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchData();
+    await fetchData(false); // Actualización manual sin loading inicial
     setIsRefreshing(false);
   };
 
   useEffect(() => {
     console.log('🚀 useEffect ejecutándose en Home...');
-    fetchData();
+    // Carga inicial con loading
+    fetchData(true);
     
-    // Actualización automática cada 1 minuto (para pruebas)
+    // Actualización automática cada 5 minutos (sin ocultar contenido)
     const interval = setInterval(() => {
       console.log('⏰ Actualización automática de datos...');
-      fetchData();
-    }, 1 * 60 * 1000); // 1 minuto (cambiado de 10 minutos para pruebas)
+      // Actualización sin ocultar contenido (isInitialLoad = false)
+      fetchData(false);
+    }, 5 * 60 * 1000); // 5 minutos (aumentado de 1 minuto para no ser tan agresivo)
 
     // Escuchar evento de actualización global
     const handleGlobalRefresh = () => {
       console.log('🌍 Actualización global detectada en Home...');
-      fetchData();
+      fetchData(false); // Actualización global sin loading inicial
     };
 
     window.addEventListener('globalRefresh', handleGlobalRefresh);
