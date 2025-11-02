@@ -20,7 +20,7 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
     try {
       const response = await fetch(url, {
         ...options,
-        signal: AbortSignal.timeout(30000) // Timeout de 30 segundos
+        signal: AbortSignal.timeout(90000) // Timeout de 90 segundos (Render free puede tardar en despertar)
       });
       
       if (response.ok) {
