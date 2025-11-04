@@ -7,7 +7,8 @@ const CircularProgressBar = ({ value, size = 120, stroke = 10, color = '#3b82f6'
   const circ = 2 * Math.PI * radius;
   // Permitir valores superiores al 100%
   const progressValue = Math.min(value, 200); // Máximo 200% para evitar overflow visual
-  const offset = circ - (progressValue / 100) * circ;
+  // Si está en 100% o más, completar el círculo
+  const offset = progressValue >= 100 ? 0 : circ - (progressValue / 100) * circ;
   return (
     <svg width={size} height={size}>
       <circle
@@ -45,7 +46,7 @@ const CircularProgressBar = ({ value, size = 120, stroke = 10, color = '#3b82f6'
           textRendering: 'optimizeLegibility'
         }}
       >
-        {`${Math.min(value, 200)}%`}
+        {`${Math.round(Math.min(value, 200))}%`}
       </text>
     </svg>
   );
@@ -70,10 +71,10 @@ const KpiMetaCard = ({
   });
 
   useEffect(() => {
-    // Usar los datos pasados como props en lugar de hacer fetch
+    // Calcular el porcentaje directamente desde los valores actuales/meta
     const meta = targetValue;
     const ventasActuales = currentValue;
-    const porcentajeCumplimiento = percentage;
+    const porcentajeCumplimiento = meta > 0 ? (ventasActuales / meta) * 100 : 0;
     const faltante = meta - ventasActuales;
 
     setMetaData({
@@ -306,7 +307,7 @@ const KpiMetaCard = ({
             fontWeight: 500
           }}
         >
-          Actual: {formatValue(metaData.ventasActuales)}
+          Meta: {formatValue(metaData.meta)}
         </Typography>
         <Typography 
           variant="caption" 
@@ -316,7 +317,7 @@ const KpiMetaCard = ({
             fontWeight: 500
           }}
         >
-          Meta: {formatValue(metaData.meta)}
+          Actual: {formatValue(metaData.ventasActuales)}
         </Typography>
       </Box>
     </Box>

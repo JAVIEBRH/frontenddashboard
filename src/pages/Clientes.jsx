@@ -111,13 +111,66 @@ export default function Clientes({ refreshTrigger = 0 }) {
   
   // Estados para datos reales
   const [clientes, setClientes] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Función para generar datos reales de clientes en riesgo
-  const generarClientesEnRiesgoData = () => {
+  // Estados para las listas apiladas
+  const [searchTermVIP, setSearchTermVIP] = useState('');
+  const [searchTermFrecuencia, setSearchTermFrecuencia] = useState('');
+  const [clientesVIP, setClientesVIP] = useState([]);
+  const [clientesFrecuencia, setClientesFrecuencia] = useState([]);
+  const [clientesEnRiesgoData, setClientesEnRiesgoData] = useState([]);
+  const [clientesVipData, setClientesVipData] = useState([]);
+
+  // Estados para notificaciones
+  const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
+
+  // Función unificada para calcular estado activo/inactivo
+  const calcularEstadoCliente = (fechaUltimo) => {
+    if (!fechaUltimo || fechaUltimo.trim() === '') return 'Inactivo';
+    
+    // Normalizar fecha: acepta DD-MM-YYYY o YYYY-MM-DD
+    const fecha = parseFecha(fechaUltimo);
+    if (!fecha) {
+      console.warn('Fecha inválida para cálculo de estado:', fechaUltimo);
+      return 'Inactivo';
+    }
+    
+    // Verificar que la fecha no sea futura (más de 1 día en el futuro)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Normalizar hora para comparación
+    const fechaNormalizada = new Date(fecha);
+    fechaNormalizada.setHours(0, 0, 0, 0);
+    
+    const diffMs = hoy - fechaNormalizada;
+    const diffDias = diffMs / (1000 * 60 * 60 * 24);
+    
+    // Si la fecha es futura o muy antigua (más de 10 años), considerar inactivo
+    if (diffDias < -1 || diffDias > 3650) {
+      console.warn('Fecha fuera de rango razonable:', fechaUltimo, 'diferencia en días:', diffDias);
+      return 'Inactivo';
+    }
+    
+    return diffDias <= 75 ? 'Activo' : 'Inactivo';
+  };
+
+  // Función para generar datos de clientes en riesgo (recibe datos como parámetros)
+  const generarClientesEnRiesgoData = (clientesData, pedidosData) => {
+    if (!clientesData || clientesData.length === 0 || !pedidosData || pedidosData.length === 0) {
+      return [];
+    }
+
     const hoy = new Date();
     
+    // Calcular estado para cada cliente
+    const clientesConEstadoTemp = clientesData.map(cliente => ({
+      ...cliente,
+      estado: calcularEstadoCliente(cliente.ultimo_pedido)
+    }));
+    
     // Obtener clientes que están en riesgo (60-75 días sin comprar)
-    const clientesEnRiesgoReales = clientesConEstado.filter(c => {
+    const clientesEnRiesgoReales = clientesConEstadoTemp.filter(c => {
       const fechaUltimo = parseFecha(c.ultimo_pedido || '');
       if (!fechaUltimo) return false;
       const diff = (hoy - fechaUltimo) / (1000 * 60 * 60 * 24);
@@ -126,11 +179,17 @@ export default function Clientes({ refreshTrigger = 0 }) {
 
     // Calcular ticket promedio para cada cliente
     const clientesConTicketPromedio = clientesEnRiesgoReales.map(cliente => {
-      // Buscar todos los pedidos de este cliente
-      const pedidosCliente = pedidos.filter(p => {
+      // Buscar todos los pedidos de este cliente (por dirección y email)
+      const pedidosCliente = pedidosData.filter(p => {
+        const emailPedido = (p.usuario || '').trim().toLowerCase();
+        const emailCliente = (cliente.email || '').trim().toLowerCase();
+        const matchEmail = emailCliente && emailPedido && emailCliente === emailPedido;
+        
         const dirPedido = (p.dire || p.direccion || '').trim().toLowerCase();
         const dirCliente = (cliente.direccion || '').trim().toLowerCase();
-        return dirPedido === dirCliente;
+        const matchDireccion = dirCliente && dirPedido && dirCliente === dirPedido && dirPedido !== '';
+        
+        return matchEmail || matchDireccion;
       });
 
       // Calcular ticket promedio
@@ -165,65 +224,28 @@ export default function Clientes({ refreshTrigger = 0 }) {
     return clientesConTicketPromedio
       .sort((a, b) => b.diasSinComprar - a.diasSinComprar);
   };
-  const [pedidos, setPedidos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Estados para las listas apiladas
-  const [searchTermVIP, setSearchTermVIP] = useState('');
-  const [searchTermFrecuencia, setSearchTermFrecuencia] = useState('');
-  const [clientesVIP, setClientesVIP] = useState([]);
-  const [clientesFrecuencia, setClientesFrecuencia] = useState([]);
 
-  // Estados para notificaciones
-  const [notificationsAnchorEl, setNotificationsAnchorEl] = useState(null);
-
-  // Función unificada para calcular estado activo/inactivo
-  const calcularEstadoCliente = (fechaUltimo) => {
-    if (!fechaUltimo || fechaUltimo.trim() === '') return 'Inactivo';
-    
-    const fecha = parseFecha(fechaUltimo);
-    if (!fecha) {
-      console.warn('Fecha inválida para cálculo de estado:', fechaUltimo);
-      return 'Inactivo';
+  // Función para generar datos de clientes VIP (recibe datos como parámetros)
+  const generarClientesVipData = (clientesVIPyFrecuenciaData, pedidosData) => {
+    if (!clientesVIPyFrecuenciaData || clientesVIPyFrecuenciaData.length === 0 || !pedidosData || pedidosData.length === 0) {
+      return [];
     }
-    
-    // Verificar que la fecha no sea futura (más de 1 día en el futuro)
-    const hoy = new Date();
-    const diffMs = hoy - fecha;
-    const diffDias = diffMs / (1000 * 60 * 60 * 24);
-    
-    // Si la fecha es futura o muy antigua (más de 10 años), considerar inactivo
-    if (diffDias < -1 || diffDias > 3650) {
-      console.warn('Fecha fuera de rango razonable:', fechaUltimo, 'diferencia en días:', diffDias);
-      return 'Inactivo';
-    }
-    
-    return diffDias <= 75 ? 'Activo' : 'Inactivo';
-  };
 
-  // Enriquecer todos los clientes con estado funcional para el card y la tabla principal
-  const clientesConEstado = clientes.map(cliente => {
-    const estado = calcularEstadoCliente(cliente.ultimo_pedido);
-    return { ...cliente, estado };
-  });
-
-  const clientesActivos = clientesConEstado.filter(c => c.estado === 'Activo');
-  const clientesInactivos = clientesConEstado.filter(c => c.estado === 'Inactivo');
-
-  // Datos reales de clientes en riesgo
-  const clientesEnRiesgoData = generarClientesEnRiesgoData();
-
-  // Función para generar datos reales de clientes VIP
-  const generarClientesVipData = () => {
     const hoy = new Date();
     
     // Obtener clientes VIP (los que están tanto en VIP como en Frecuencia)
-    const clientesVipReales = clientesVIPyFrecuencia.map(cliente => {
-      // Buscar todos los pedidos de este cliente
-      const pedidosCliente = pedidos.filter(p => {
+    const clientesVipReales = clientesVIPyFrecuenciaData.map(cliente => {
+      // Buscar todos los pedidos de este cliente (por dirección y email)
+      const pedidosCliente = pedidosData.filter(p => {
+        const emailPedido = (p.usuario || '').trim().toLowerCase();
+        const emailCliente = (cliente.email || '').trim().toLowerCase();
+        const matchEmail = emailCliente && emailPedido && emailCliente === emailPedido;
+        
         const dirPedido = (p.dire || p.direccion || '').trim().toLowerCase();
         const dirCliente = (cliente.direccion || '').trim().toLowerCase();
-        return dirPedido === dirCliente;
+        const matchDireccion = dirCliente && dirPedido && dirCliente === dirPedido && dirPedido !== '';
+        
+        return matchEmail || matchDireccion;
       });
 
       // Calcular ticket promedio
@@ -263,22 +285,45 @@ export default function Clientes({ refreshTrigger = 0 }) {
       .sort((a, b) => b.totalComprado - a.totalComprado);
   };
 
+  // Calcular clientes con estado (usar useMemo para evitar recálculos innecesarios)
+  const clientesConEstado = React.useMemo(() => {
+    return clientes.map(cliente => {
+      const estado = calcularEstadoCliente(cliente.ultimo_pedido);
+      return { ...cliente, estado };
+    });
+  }, [clientes]);
+
+  const clientesActivos = React.useMemo(() => 
+    clientesConEstado.filter(c => c.estado === 'Activo'), 
+    [clientesConEstado]
+  );
+  
+  const clientesInactivos = React.useMemo(() => 
+    clientesConEstado.filter(c => c.estado === 'Inactivo'), 
+    [clientesConEstado]
+  );
 
 
-  // Filtros de clientes (usar clientesConEstado)
-  const filteredClientes = clientesConEstado.filter(cliente => {
-    const matchesSearch = (cliente.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (cliente.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesEstado = filterEstado === 'Todos' || cliente.estado === filterEstado;
-    const matchesTipo = filterTipo === 'Todos' || cliente.tipo === filterTipo;
-    return matchesSearch && matchesEstado && matchesTipo;
-  })
-  // Ordenar: primero activos, luego inactivos
-  .sort((a, b) => {
-    if (a.estado === b.estado) return 0;
-    if (a.estado === 'Activo') return -1;
-    return 1;
-  });
+
+  // Filtros de clientes (usar clientesConEstado) - Incluye búsqueda por dirección
+  const filteredClientes = React.useMemo(() => {
+    return clientesConEstado.filter(cliente => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        (cliente.nombre || '').toLowerCase().includes(searchLower) ||
+        (cliente.email || '').toLowerCase().includes(searchLower) ||
+        (cliente.direccion || '').toLowerCase().includes(searchLower);
+      const matchesEstado = filterEstado === 'Todos' || cliente.estado === filterEstado;
+      const matchesTipo = filterTipo === 'Todos' || cliente.tipo === filterTipo;
+      return matchesSearch && matchesEstado && matchesTipo;
+    })
+    // Ordenar: primero activos, luego inactivos
+    .sort((a, b) => {
+      if (a.estado === b.estado) return 0;
+      if (a.estado === 'Activo') return -1;
+      return 1;
+    });
+  }, [clientesConEstado, searchTerm, filterEstado, filterTipo]);
 
   // Estado para paginación (debe ir después de filteredClientes)
   const [pagina, setPagina] = useState(1);
@@ -298,32 +343,100 @@ export default function Clientes({ refreshTrigger = 0 }) {
           getPedidos()
         ]);
 
-      // Adaptar clientes
-      const clientesData = clientesDataRaw.map((c, idx) => {
-        return {
-          id: idx + 1, // o usa c.usuario si es único
-          nombre: c.usuario || '',
-          email: '', // No viene en el backend
-          telefono: c.telefonou || '',
-          direccion: c.dire || '',
-          estado: calcularEstadoCliente(c.fecha), // Usar función unificada
-          tipo: 'Regular', // Puedes mejorar esto si tienes lógica para VIP
-          pedidos: 0, // Se calculará después
-          total_comprado: c.monto_ultimo_pedido || 0,
-          ultimo_pedido: c.fecha || ''
-        };
-      });
-
-      // Adaptar pedidos
+      // Adaptar pedidos primero para poder calcular estadísticas
       const pedidosData = pedidosDataRaw.map((p, idx) => ({
         id: idx + 1,
-        cliente_id: clientesData.find(c => c.nombre === p.usuario)?.id || null,
+        usuario: p.usuario || '',
         empresa: p.nombrelocal || '',
         precio: p.precio ? Number(p.precio) : 0,
         fecha: p.fecha || '',
         status: p.status || '',
-        dire: p.dire || '', // <-- AGREGADO: dirección del pedido
+        dire: p.dire || p.direccion || '',
+        ordenpedido: p.ordenpedido || '', // Cantidad de bidones por pedido
       }));
+
+      // Adaptar clientes y calcular pedidos/total desde pedidosData
+      const clientesData = clientesDataRaw.map((c, idx) => {
+        // El backend devuelve: nombre, correo, dire (no usuario)
+        // Los pedidos tienen: usuario (email), dire
+        // Buscar todos los pedidos de este cliente (por email/correo o dirección)
+        const emailCliente = (c.correo || c.usuario || '').trim().toLowerCase();
+        const dirCliente = (c.dire || c.direccion || '').trim().toLowerCase();
+        
+        const pedidosCliente = pedidosData.filter(p => {
+          // Comparar usuario (email) del pedido con correo del cliente
+          const emailPedido = (p.usuario || '').trim().toLowerCase();
+          const matchEmail = emailCliente && emailPedido && emailCliente === emailPedido;
+          
+          // Comparar dirección del pedido con dirección del cliente
+          const dirPedido = (p.dire || p.direccion || '').trim().toLowerCase();
+          const matchDireccion = dirCliente && dirPedido && dirCliente === dirPedido && dirPedido !== '';
+          
+          return matchEmail || matchDireccion;
+        });
+
+        // Calcular total de pedidos y monto total
+        const totalPedidos = pedidosCliente.length;
+        const totalComprado = pedidosCliente.reduce((sum, p) => sum + (p.precio || 0), 0);
+
+        // Encontrar fecha del último pedido
+        const fechasPedidos = pedidosCliente
+          .map(p => parseFecha(p.fecha))
+          .filter(f => f !== null)
+          .sort((a, b) => b - a);
+        const ultimaFechaPedido = fechasPedidos.length > 0 ? fechasPedidos[0] : parseFecha(c.fecha);
+
+        // Obtener dirección del cliente (prioridad: 1. Dirección del cliente, 2. Pedidos por email, 3. Pedidos asociados)
+        let direccionCliente = (c.dire || c.direccion || '').trim();
+        
+        // PRIORIDAD 1: Si no tiene dirección propia, buscar en TODOS los pedidos que coincidan con el email (más confiable)
+        if (!direccionCliente && emailCliente) {
+          const pedidosPorEmail = pedidosData.filter(p => {
+            const emailPedido = (p.usuario || '').trim().toLowerCase();
+            return emailPedido && emailPedido === emailCliente;
+          });
+          if (pedidosPorEmail.length > 0) {
+            const direccionesEmail = pedidosPorEmail
+              .map(p => (p.dire || p.direccion || '').trim())
+              .filter(d => d !== '');
+            if (direccionesEmail.length > 0) {
+              // Usar la dirección más frecuente (o la primera si todas son iguales)
+              direccionCliente = direccionesEmail[0];
+            }
+          }
+        }
+        
+        // PRIORIDAD 2: Si aún no tiene dirección, buscar en los pedidos asociados por dirección
+        if (!direccionCliente && pedidosCliente.length > 0) {
+          const direccionesPedidos = pedidosCliente
+            .map(p => (p.dire || p.direccion || '').trim())
+            .filter(d => d !== '');
+          if (direccionesPedidos.length > 0) {
+            direccionCliente = direccionesPedidos[0];
+          }
+        }
+
+        // Determinar nombre a mostrar (evitar "Cliente X" si hay nombre real)
+        const nombreMostrar = c.nombre && c.nombre.trim() !== '' && !c.nombre.includes('Cliente') 
+          ? c.nombre.trim() 
+          : (c.correo || c.usuario || `Cliente ${idx + 1}`);
+
+        return {
+          id: idx + 1,
+          nombre: nombreMostrar,
+          email: c.correo || '', // El backend devuelve 'correo'
+          telefono: c.telefonou || c.telefono || '',
+          direccion: direccionCliente, // Usar dirección del cliente o de sus pedidos
+          estado: calcularEstadoCliente(ultimaFechaPedido ? ultimaFechaPedido.toISOString().split('T')[0] : c.fecha),
+          tipo: 'Regular', // Puedes mejorar esto si tienes lógica para VIP
+          pedidos: totalPedidos,
+          total_comprado: totalComprado || c.monto_ultimo_pedido || 0,
+          ultimo_pedido: ultimaFechaPedido ? ultimaFechaPedido.toISOString().split('T')[0] : (c.fecha || ''),
+          // Guardar campos originales para debugging
+          correo_original: c.correo,
+          dire_original: c.dire
+        };
+      });
         
         setClientes(clientesData);
         setPedidos(pedidosData);
@@ -340,7 +453,94 @@ export default function Clientes({ refreshTrigger = 0 }) {
       });
       
       console.log('Datos actualizados:', new Date().toLocaleTimeString());
+      console.log(`Total clientes cargados: ${clientesData.length}`);
+      console.log(`Total pedidos cargados: ${pedidosData.length}`);
       console.log(`Estados calculados: ${activos} activos, ${inactivos} inactivos`);
+      console.log('Ejemplo de cliente procesado:', clientesData[0]);
+      console.log('Ejemplo de cliente RAW del backend:', clientesDataRaw[0]);
+      console.log('Ejemplo de pedido:', pedidosData[0]);
+      console.log('Ejemplo de pedido RAW del backend:', pedidosDataRaw[0]);
+      // Verificar si ordenpedido está presente
+      const pedidosConOrdenPedido = pedidosData.filter(p => p.ordenpedido && p.ordenpedido.trim() !== '');
+      console.log(`Pedidos con ordenpedido: ${pedidosConOrdenPedido.length} de ${pedidosData.length}`);
+      if (pedidosConOrdenPedido.length > 0) {
+        console.log('Ejemplo de pedido CON ordenpedido:', pedidosConOrdenPedido[0]);
+      } else {
+        console.warn('⚠️ NINGÚN PEDIDO TIENE ordenpedido - Todos los pedidos tienen ordenpedido vacío');
+      }
+      
+      // Verificar direcciones en pedidos
+      const pedidosConDireccion = pedidosData.filter(p => p.dire && p.dire.trim() !== '');
+      console.log(`Pedidos con dirección: ${pedidosConDireccion.length} de ${pedidosData.length}`);
+      if (pedidosConDireccion.length > 0) {
+        console.log('Ejemplo de pedido CON dirección:', pedidosConDireccion[0]);
+      } else {
+        console.warn('⚠️ NINGÚN PEDIDO TIENE DIRECCIÓN - Todos los pedidos tienen dire vacío');
+      }
+      // Verificar coincidencias y direcciones
+      const clienteConPedidos = clientesData.find(c => c.pedidos > 0);
+      const clienteConDireccion = clientesData.find(c => c.direccion && c.direccion.trim() !== '');
+      const clientesSinDireccion = clientesData.filter(c => !c.direccion || c.direccion.trim() === '');
+      
+      if (clienteConPedidos) {
+        console.log('Cliente con pedidos encontrado:', clienteConPedidos);
+      } else {
+        console.warn('⚠️ NINGÚN CLIENTE TIENE PEDIDOS ASOCIADOS - Revisar lógica de mapeo');
+      }
+      
+      if (clienteConDireccion) {
+        console.log('✅ Cliente con dirección encontrado:', clienteConDireccion);
+      } else {
+        console.warn(`⚠️ NINGÚN CLIENTE TIENE DIRECCIÓN - ${clientesSinDireccion.length} clientes sin dirección`);
+        if (clientesSinDireccion.length > 0) {
+          const ejemploSinDireccion = clientesSinDireccion[0];
+          console.log('Ejemplo de cliente sin dirección:', ejemploSinDireccion);
+          // Buscar pedidos de este cliente específico para debugging
+          const pedidosEjemplo = pedidosData.filter(p => {
+            const emailEjemplo = (ejemploSinDireccion.email || '').trim().toLowerCase();
+            const emailPedido = (p.usuario || '').trim().toLowerCase();
+            return emailEjemplo && emailPedido && emailEjemplo === emailPedido;
+          });
+          console.log(`Pedidos encontrados para "${ejemploSinDireccion.nombre}" (${ejemploSinDireccion.email}):`, pedidosEjemplo.length);
+          if (pedidosEjemplo.length > 0) {
+            console.log('Primer pedido del cliente sin dirección:', pedidosEjemplo[0]);
+          } else {
+            console.warn(`⚠️ "${ejemploSinDireccion.nombre}" NO tiene pedidos con email "${ejemploSinDireccion.email}"`);
+          }
+        }
+      }
+      
+      // Contar clientes con y sin dirección
+      const clientesConDireccionTotal = clientesData.filter(c => c.direccion && c.direccion.trim() !== '').length;
+      console.log(`📊 Resumen: ${clientesConDireccionTotal} de ${clientesData.length} clientes tienen dirección (${Math.round(clientesConDireccionTotal/clientesData.length*100)}%)`);
+      
+      // Log de KPIs calculados
+      const totalActivos = clientesData.filter(c => c.estado === 'Activo').length;
+      const totalInactivos = clientesData.filter(c => c.estado === 'Inactivo').length;
+      console.log('📈 KPIs calculados:', {
+        totalClientes: clientesData.length,
+        totalClientesActivos: totalActivos,
+        totalClientesInactivos: totalInactivos,
+        totalPedidos: pedidosData.length
+      });
+      
+      // Verificar algunos ejemplos de estados
+      const ejemplosActivos = clientesData.filter(c => c.estado === 'Activo').slice(0, 2);
+      const ejemplosInactivos = clientesData.filter(c => c.estado === 'Inactivo').slice(0, 2);
+      if (ejemplosActivos.length > 0) {
+        console.log('📊 Ejemplos de clientes ACTIVOS:', ejemplosActivos.map(c => ({
+          nombre: c.nombre,
+          ultimo_pedido: c.ultimo_pedido,
+          estado: c.estado
+        })));
+      }
+      if (ejemplosInactivos.length > 0) {
+        console.log('📊 Ejemplos de clientes INACTIVOS:', ejemplosInactivos.map(c => ({
+          nombre: c.nombre,
+          ultimo_pedido: c.ultimo_pedido,
+          estado: c.estado
+        })));
+      }
       
       if (fechasInvalidas.length > 0) {
         console.warn('Fechas inválidas encontradas:', fechasInvalidas.map(c => ({
@@ -350,8 +550,13 @@ export default function Clientes({ refreshTrigger = 0 }) {
       }
       } catch (error) {
         console.error('Error cargando datos:', error);
+        setError(`Error al cargar datos: ${error.message || 'Error desconocido'}`);
         setClientes([]);
         setPedidos([]);
+        setClientesVIP([]);
+        setClientesFrecuencia([]);
+        setClientesEnRiesgoData([]);
+        setClientesVipData([]);
       } finally {
         setLoading(false);
       }
@@ -362,24 +567,58 @@ export default function Clientes({ refreshTrigger = 0 }) {
     cargarDatos();
   }, [refreshTrigger]);
 
-  // Actualización automática cada 10 minutos
+  // Actualización automática con debounce para evitar múltiples llamadas
   useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('Actualización automática iniciada:', new Date().toLocaleTimeString());
-      cargarDatos();
-    }, 10 * 60 * 1000); // 10 minutos
-
-    // Escuchar evento de actualización global
-    const handleGlobalRefresh = () => {
-      console.log('Actualización global detectada en Clientes...');
+    let timeoutId = null;
+    let lastRefresh = 0;
+    const DEBOUNCE_DELAY = 30000; // 30 segundos mínimo entre actualizaciones
+    const INTERVAL_TIME = 60000; // 1 minuto
+    
+    const debouncedCargarDatos = () => {
+      const now = Date.now();
+      if (now - lastRefresh < DEBOUNCE_DELAY) {
+        console.log('Actualización debounceada (muy reciente)');
+        return;
+      }
+      lastRefresh = now;
+      console.log('Actualización automática (Clientes):', new Date().toLocaleTimeString());
       cargarDatos();
     };
 
+    const interval = setInterval(debouncedCargarDatos, INTERVAL_TIME);
+
+    // Escuchar evento de actualización global (con debounce)
+    const handleGlobalRefresh = () => {
+      console.log('Actualización global detectada en Clientes...');
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(debouncedCargarDatos, 1000);
+    };
+
+    // Refrescar al volver el foco a la pestaña (con debounce)
+    const handleFocus = () => {
+      console.log('Foco en ventana: refrescando Clientes');
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(debouncedCargarDatos, 1000);
+    };
+    
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Pestaña visible: refrescando Clientes');
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(debouncedCargarDatos, 1000);
+      }
+    };
+
     window.addEventListener('globalRefresh', handleGlobalRefresh);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener('globalRefresh', handleGlobalRefresh);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -411,10 +650,20 @@ export default function Clientes({ refreshTrigger = 0 }) {
       const clave = claveAgrupacion(pedido.dire || pedido.direccion);
       if (!clave) return;
       if (!comprasPorClave[clave]) {
-        comprasPorClave[clave] = { total: 0, frecuencia: 0, ultimo: null };
+        comprasPorClave[clave] = { total: 0, frecuencia: 0, ultimo: null, totalBidones: 0 };
       }
       comprasPorClave[clave].total += pedido.precio;
       comprasPorClave[clave].frecuencia += 1;
+      // Calcular bidones del pedido: usar ordenpedido si existe, sino calcular desde precio
+      let bidonesPedido = 0;
+      if (pedido.ordenpedido && pedido.ordenpedido.trim() !== '') {
+        bidonesPedido = parseInt(pedido.ordenpedido) || 0;
+      }
+      // Si no hay ordenpedido, calcular desde precio (2000 por bidón)
+      if (bidonesPedido === 0 && pedido.precio > 0) {
+        bidonesPedido = Math.max(1, Math.round(pedido.precio / 2000));
+      }
+      comprasPorClave[clave].totalBidones += bidonesPedido;
       if (!comprasPorClave[clave].ultimo || new Date(pedido.fecha) > new Date(comprasPorClave[clave].ultimo)) {
         comprasPorClave[clave].ultimo = pedido.fecha;
       }
@@ -441,10 +690,11 @@ export default function Clientes({ refreshTrigger = 0 }) {
     // Enriquecer clientes agrupados con compras
     const clientesEnriquecidos = Object.values(clientesPorClave).map(cliente => {
       const clave = claveAgrupacion(cliente.direccion);
-      const compras = comprasPorClave[clave] || { total: 0, frecuencia: 0, ultimo: null };
-      // Calcular bidones por pedido (asumiendo cada pedido es por 1 o más bidones de 20L, y precio unitario 2000)
-      const totalBidones = compras.total ? Math.round(compras.total / 2000) : 0;
-      const bidonesPorPedido = compras.frecuencia > 0 ? (totalBidones / compras.frecuencia) : 0;
+      const compras = comprasPorClave[clave] || { total: 0, frecuencia: 0, ultimo: null, totalBidones: 0 };
+      // Calcular bidones por pedido usando el total de bidones calculado de los pedidos reales
+      const bidonesPorPedido = compras.frecuencia > 0 && compras.totalBidones > 0 
+        ? (compras.totalBidones / compras.frecuencia) 
+        : 0;
       
       // Usar la fecha más reciente entre compras.ultimo y cliente.ultimo_pedido
       const fechaCompras = compras.ultimo || '';
@@ -487,8 +737,34 @@ export default function Clientes({ refreshTrigger = 0 }) {
       .sort((a, b) => b.pedidos - a.pedidos)
       .slice(0, 15);
 
+    // Log para verificar cálculo de bidones
+    console.log('📦 Cálculo de bidones por pedido:');
+    if (topVIP.length > 0) {
+      console.log('Ejemplo de cliente VIP con bidones:', {
+        direccion: topVIP[0].direccion,
+        pedidos: topVIP[0].pedidos,
+        bidonesPorPedido: topVIP[0].bidonesPorPedido,
+        total_comprado: topVIP[0].total_comprado
+      });
+    }
+    // Verificar si hay clientes con bidones > 0
+    const clientesConBidones = topVIP.filter(c => c.bidonesPorPedido && c.bidonesPorPedido > 0);
+    console.log(`Clientes VIP con bidones > 0: ${clientesConBidones.length} de ${topVIP.length}`);
+
     setClientesVIP(topVIP);
     setClientesFrecuencia(topFrecuencia);
+    
+    // Calcular clientes VIP y Frecuencia para generar datos de clientes en riesgo y VIP
+    const direccionesVIPTemp = new Set(topVIP.map(c => (c.direccion || '').toLowerCase()));
+    const direccionesFrecuenciaTemp = new Set(topFrecuencia.map(c => (c.direccion || '').toLowerCase()));
+    const clientesVIPyFrecuenciaTemp = topVIP.filter(c => direccionesFrecuenciaTemp.has((c.direccion || '').toLowerCase()));
+    
+    // Generar datos de clientes en riesgo y VIP después de calcular las listas
+    const riesgoData = generarClientesEnRiesgoData(clientesData, pedidosData);
+    const vipData = generarClientesVipData(clientesVIPyFrecuenciaTemp, pedidosData);
+    
+    setClientesEnRiesgoData(riesgoData);
+    setClientesVipData(vipData);
   };
 
   const handleMenuClick = (event) => {
@@ -506,18 +782,49 @@ export default function Clientes({ refreshTrigger = 0 }) {
   // Estado para controlar el período de análisis de crecimiento
   const [periodoCrecimiento, setPeriodoCrecimiento] = useState('12meses'); // '12meses' o '6meses'
 
-  // Filtrar VIP y Frecuencia según el filtro de estado
-  const filteredVIP = clientesVIP.filter(cliente => 
-    (filtroEstadoVIP === 'Todos' || cliente.estado === filtroEstadoVIP) &&
-    ((cliente.nombre || '').toLowerCase().includes(searchTermVIP.toLowerCase()) ||
-     (cliente.email || '').toLowerCase().includes(searchTermVIP.toLowerCase()))
-  );
+  // Filtrar VIP y Frecuencia según el filtro de estado (incluye búsqueda por dirección)
+  const filteredVIP = React.useMemo(() => {
+    const searchLower = searchTermVIP.toLowerCase();
+    return clientesVIP.filter(cliente => 
+      (filtroEstadoVIP === 'Todos' || cliente.estado === filtroEstadoVIP) &&
+      ((cliente.nombre || '').toLowerCase().includes(searchLower) ||
+       (cliente.email || '').toLowerCase().includes(searchLower) ||
+       (cliente.direccion || '').toLowerCase().includes(searchLower))
+    );
+  }, [clientesVIP, filtroEstadoVIP, searchTermVIP]);
+  
+  // Log para verificar datos de la tabla VIP
+  if (filteredVIP.length > 0) {
+    console.log('🔍 Datos de filteredVIP para tabla:', {
+      total: filteredVIP.length,
+      primerCliente: {
+        direccion: filteredVIP[0].direccion,
+        pedidos: filteredVIP[0].pedidos,
+        bidonesPorPedido: filteredVIP[0].bidonesPorPedido,
+        total_comprado: filteredVIP[0].total_comprado,
+        tieneBidones: !!filteredVIP[0].bidonesPorPedido,
+        valorBidones: filteredVIP[0].bidonesPorPedido
+      },
+      todosLosCampos: Object.keys(filteredVIP[0])
+    });
+    
+    // Verificar todos los clientes VIP
+    const clientesSinBidones = filteredVIP.filter(c => !c.bidonesPorPedido || c.bidonesPorPedido === 0);
+    if (clientesSinBidones.length > 0) {
+      console.warn(`⚠️ ${clientesSinBidones.length} clientes VIP NO tienen bidonesPorPedido`);
+      console.log('Ejemplo de cliente sin bidones:', clientesSinBidones[0]);
+    }
+  }
 
-  const filteredFrecuencia = clientesFrecuencia.filter(cliente => 
-    (filtroEstadoFrecuencia === 'Todos' || cliente.estado === filtroEstadoFrecuencia) &&
-    ((cliente.nombre || '').toLowerCase().includes(searchTermFrecuencia.toLowerCase()) ||
-     (cliente.email || '').toLowerCase().includes(searchTermFrecuencia.toLowerCase()))
-  );
+  const filteredFrecuencia = React.useMemo(() => {
+    const searchLower = searchTermFrecuencia.toLowerCase();
+    return clientesFrecuencia.filter(cliente => 
+      (filtroEstadoFrecuencia === 'Todos' || cliente.estado === filtroEstadoFrecuencia) &&
+      ((cliente.nombre || '').toLowerCase().includes(searchLower) ||
+       (cliente.email || '').toLowerCase().includes(searchLower) ||
+       (cliente.direccion || '').toLowerCase().includes(searchLower))
+    );
+  }, [clientesFrecuencia, filtroEstadoFrecuencia, searchTermFrecuencia]);
 
   // Calcular clientes que están en ambas listas (VIP y Frecuencia)
   const direccionesVIP = new Set(clientesVIP.map(c => (c.direccion || '').toLowerCase()));
@@ -526,11 +833,10 @@ export default function Clientes({ refreshTrigger = 0 }) {
   const cantidadVIPyFrecuencia = clientesVIPyFrecuencia.length;
   const tooltipVIPyFrecuencia = clientesVIPyFrecuencia.map(c => c.direccion || 'Sin dirección').join('\n');
 
-  // Datos reales de clientes VIP
-  const clientesVipData = generarClientesVipData();
-
-  // Calcular clientes reactivados
-  const clientesReactivados = (() => {
+  // Calcular clientes reactivados (mejorado: verifica que haya pedido después del gap > 75 días)
+  const clientesReactivados = React.useMemo(() => {
+    if (!pedidos || pedidos.length === 0) return 0;
+    
     // Agrupar pedidos por dirección normalizada
     const pedidosPorDireccion = {};
     pedidos.forEach(pedido => {
@@ -539,31 +845,36 @@ export default function Clientes({ refreshTrigger = 0 }) {
       if (!pedidosPorDireccion[dirNorm]) pedidosPorDireccion[dirNorm] = [];
       pedidosPorDireccion[dirNorm].push(pedido);
     });
+    
     let count = 0;
     Object.values(pedidosPorDireccion).forEach(listaPedidos => {
       if (listaPedidos.length < 2) return;
+      
       // Ordenar por fecha ascendente
       listaPedidos.sort((a, b) => {
         const fa = parseFecha(a.fecha);
         const fb = parseFecha(b.fecha);
-        return fa - fb;
+        if (!fa || !fb) return 0;
+        return fa.getTime() - fb.getTime();
       });
-      let reactivado = false;
+      
+      // Verificar que haya al menos un gap > 75 días Y un pedido posterior
       for (let i = 1; i < listaPedidos.length; i++) {
         const fechaPrev = parseFecha(listaPedidos[i - 1].fecha);
         const fechaActual = parseFecha(listaPedidos[i].fecha);
         if (fechaPrev && fechaActual) {
-          const diff = (fechaActual - fechaPrev) / (1000 * 60 * 60 * 24);
+          const diff = (fechaActual.getTime() - fechaPrev.getTime()) / (1000 * 60 * 60 * 24);
           if (diff > 75) {
-            reactivado = true;
-            break;
+            // Verificar que hay al menos un pedido después del gap (es decir, este pedido)
+            // Si llegamos aquí, hay un gap > 75 días y un pedido después
+            count++;
+            break; // Solo contar una vez por cliente
           }
         }
       }
-      if (reactivado) count++;
     });
     return count;
-  })();
+  }, [pedidos]);
 
   // Componente reutilizable para tabla de clientes
   const TablaClientes = ({ clientes, searchTerm, onSearchChange, titulo, mostrarDireccionSolo = false }) => (
@@ -629,26 +940,32 @@ export default function Clientes({ refreshTrigger = 0 }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {clientes.map((cliente) => (
+              {clientes.map((cliente, idx) => (
                 <TableRow key={cliente.id} sx={{ '&:hover': { bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' } }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: '#3b82f6' }}>
-                        {(mostrarDireccionSolo ? (cliente.direccion || '?') : (cliente.nombre || '?')).charAt(0)}
+                        {(cliente.direccion || cliente.nombre || '?').charAt(0).toUpperCase()}
                       </Avatar>
                       <Box>
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          {mostrarDireccionSolo ? (cliente.direccion || 'Sin dirección') : cliente.nombre}
+                          {cliente.direccion && cliente.direccion.trim() !== '' 
+                            ? cliente.direccion 
+                            : (cliente.nombre && cliente.nombre.trim() !== '' && !cliente.nombre.startsWith('Cliente ') 
+                                ? cliente.nombre 
+                                : (cliente.email || `Cliente ${cliente.id}`))}
                         </Typography>
                         <Typography variant="body2" sx={{ 
                           color: 'text.secondary', 
-                          fontWeight: 600,
+                          fontWeight: 500,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
                           WebkitFontSmoothing: 'antialiased',
                           MozOsxFontSmoothing: 'grayscale',
                           textRendering: 'optimizeLegibility'
                         }}>
-                          ID: {cliente.id}
+                          {cliente.direccion && cliente.direccion.trim() !== '' 
+                            ? (cliente.nombre || cliente.email || `ID: ${cliente.id}`)
+                            : (cliente.email || `ID: ${cliente.id}`)}
                         </Typography>
                       </Box>
                     </Box>
@@ -689,19 +1006,40 @@ export default function Clientes({ refreshTrigger = 0 }) {
                       size="small" 
                       sx={{ 
                         bgcolor: cliente.estado === 'Activo' ? 
-                          (theme.palette.mode === 'dark' ? '#065f46' : '#dcfce7') : 
-                          (theme.palette.mode === 'dark' ? '#7f1d1d' : '#fee2e2'),
-                        color: cliente.estado === 'Activo' ? 
-                          (theme.palette.mode === 'dark' ? '#6ee7b7' : '#166534') : 
-                          (theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626'),
-                        fontWeight: 600
+                          (theme.palette.mode === 'dark' ? '#065f46' : '#22c55e') : 
+                          (theme.palette.mode === 'dark' ? '#7f1d1d' : '#ef4444'),
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        height: '24px',
+                        '& .MuiChip-label': {
+                          padding: '0 8px'
+                        }
                       }}
                     />
                   </TableCell>
                   {mostrarDireccionSolo ? (
                     <TableCell>
                       <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {cliente.bidonesPorPedido ? Math.round(cliente.bidonesPorPedido) : '0'}
+                        {(() => {
+                          const valor = cliente.bidonesPorPedido;
+                          // Log solo para el primer cliente para debugging
+                          if (idx === 0) {
+                            console.log('🔬 Renderizando bidonesPorPedido:', {
+                              valor: valor,
+                              tipo: typeof valor,
+                              esNumero: typeof valor === 'number',
+                              mayorACero: valor > 0,
+                              cliente: cliente.direccion
+                            });
+                          }
+                          if (valor && valor > 0) {
+                            return valor % 1 === 0 
+                              ? Math.round(valor) 
+                              : valor.toFixed(1);
+                          }
+                          return '0';
+                        })()}
                       </Typography>
                     </TableCell>
                   ) : (
@@ -946,14 +1284,29 @@ export default function Clientes({ refreshTrigger = 0 }) {
       });
     });
 
-    // Clientes inactivos (más de 75 días) - Detallados
-    const clientesInactivos = clientesConEstado.filter(c => c.estado === 'Inactivo');
+    // Clientes inactivos (más de 75 días) - Solo los que tienen fecha de último pedido válida
+    const clientesInactivos = clientesConEstado.filter(c => {
+      // Solo incluir clientes inactivos que tienen una fecha de último pedido válida
+      if (c.estado !== 'Inactivo') return false;
+      if (!c.ultimo_pedido || c.ultimo_pedido.trim() === '') return false;
+      const fechaUltimo = parseFecha(c.ultimo_pedido);
+      return fechaUltimo !== null; // Solo incluir si la fecha es válida
+    });
+    
     clientesInactivos.slice(0, 10).forEach(cliente => {
+      const fechaUltimo = parseFecha(cliente.ultimo_pedido);
+      const diasSinComprar = fechaUltimo ? Math.floor((new Date() - fechaUltimo) / (1000 * 60 * 60 * 24)) : 0;
+      const fechaFormateada = fechaUltimo ? fechaUltimo.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }) : 'N/A';
+      
       notificaciones.push({
         id: `inactivo-${cliente.id}`,
         tipo: 'error',
         titulo: 'Cliente Inactivo',
-        mensaje: `${cliente.nombre || cliente.direccion} - Último pedido: ${cliente.ultimo_pedido || 'N/A'}`,
+        mensaje: `${cliente.nombre || cliente.direccion || 'Cliente sin nombre'} - Último pedido: ${fechaFormateada} (${diasSinComprar} días)`,
         cliente: cliente,
         timestamp: new Date()
       });
@@ -1129,13 +1482,15 @@ export default function Clientes({ refreshTrigger = 0 }) {
     
     return (
       <Box sx={{
-        position: 'absolute',
-        top: '100%',
-        left: '-600px',
-        right: 0,
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '90vw',
+        maxWidth: '1200px',
+        maxHeight: '80vh',
         zIndex: 1000,
         transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        transform: 'translateY(0) scale(1)',
         opacity: 1,
         pointerEvents: 'auto',
         filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.15))'
@@ -1262,13 +1617,15 @@ export default function Clientes({ refreshTrigger = 0 }) {
     
     return (
       <Box sx={{
-        position: 'absolute',
-        top: '100%',
-        left: '-600px',
-        right: 0,
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '90vw',
+        maxWidth: '1200px',
+        maxHeight: '80vh',
         zIndex: 1000,
         transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        transform: 'translateY(0) scale(1)',
         opacity: 1,
         pointerEvents: 'auto',
         filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.15))'
@@ -1425,6 +1782,21 @@ export default function Clientes({ refreshTrigger = 0 }) {
       {/* Contenido principal */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+          {/* Mensaje de error si hay algún problema */}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3 }}
+              onClose={() => setError(null)}
+            >
+              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                {error}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Por favor, intenta recargar la página o contacta al administrador si el problema persiste.
+              </Typography>
+            </Alert>
+          )}
           
           {/* Header con buscador y filtros */}
           <Box sx={{ 
@@ -1569,8 +1941,9 @@ export default function Clientes({ refreshTrigger = 0 }) {
                 sx={{
                   '& .MuiPaper-root': {
                     borderRadius: 3,
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                    border: '1px solid #e2e8f0',
+                    boxShadow: theme.shadows[4],
+                    bgcolor: 'background.paper',
+                    border: `1px solid ${theme.palette.divider}`,
                     minWidth: 450,
                     maxWidth: 550,
                     maxHeight: 700
@@ -1579,7 +1952,17 @@ export default function Clientes({ refreshTrigger = 0 }) {
               >
                 <Box sx={{ p: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 700, 
+                        color: 'text.primary',
+                        fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                        WebkitFontSmoothing: 'antialiased',
+                        MozOsxFontSmoothing: 'grayscale',
+                        textRendering: 'optimizeLegibility'
+                      }}
+                    >
                       Alertas y Notificaciones
                     </Typography>
                     <Chip 
@@ -1587,22 +1970,50 @@ export default function Clientes({ refreshTrigger = 0 }) {
                       size="small" 
                       sx={{ 
                         fontWeight: 600,
-                        bgcolor: notificacionesNoLeidas > 0 ? theme.palette.warning.light : theme.palette.background.paper,
-                        color: notificacionesNoLeidas > 0 ? theme.palette.warning.dark : theme.palette.text.secondary,
-                        border: notificacionesNoLeidas > 0 ? `1px solid ${theme.palette.warning.main}` : `1px solid ${theme.palette.divider}`
+                        bgcolor: notificacionesNoLeidas > 0 
+                          ? (theme.palette.mode === 'dark' ? '#92400e' : '#fef3c7')
+                          : 'background.paper',
+                        color: notificacionesNoLeidas > 0 
+                          ? (theme.palette.mode === 'dark' ? '#fcd34d' : '#92400e')
+                          : 'text.secondary',
+                        border: `1px solid ${notificacionesNoLeidas > 0 ? theme.palette.warning.main : theme.palette.divider}`
                       }}
                     />
                   </Box>
                   
-                  <Divider sx={{ mb: 2 }} />
+                  <Divider sx={{ mb: 2, borderColor: theme.palette.divider }} />
                   
                   {notificaciones.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <CheckCircle sx={{ color: '#059669', fontSize: 48, mb: 2 }} />
-                      <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 600 }}>
+                      <CheckCircle sx={{ 
+                        color: theme.palette.mode === 'dark' ? '#22c55e' : '#059669', 
+                        fontSize: 48, 
+                        mb: 2 
+                      }} />
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          color: 'text.primary', 
+                          fontWeight: 600,
+                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                          WebkitFontSmoothing: 'antialiased',
+                          MozOsxFontSmoothing: 'grayscale',
+                          textRendering: 'optimizeLegibility',
+                          mb: 1
+                        }}
+                      >
                         ¡Todo en orden!
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                          WebkitFontSmoothing: 'antialiased',
+                          MozOsxFontSmoothing: 'grayscale',
+                          textRendering: 'optimizeLegibility'
+                        }}
+                      >
                         No hay alertas pendientes
                       </Typography>
                     </Box>
@@ -1616,10 +2027,21 @@ export default function Clientes({ refreshTrigger = 0 }) {
                         
                         return (
                           <>
-                            {/* Errores */}
+                            {/* Errores - Clientes en Riesgo */}
                             {errores.length > 0 && (
                               <Box sx={{ mb: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.custom.critical, mb: 1 }}>
+                                <Typography 
+                                  variant="subtitle2" 
+                                  sx={{ 
+                                    fontWeight: 700, 
+                                    color: theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626',
+                                    mb: 1,
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                    WebkitFontSmoothing: 'antialiased',
+                                    MozOsxFontSmoothing: 'grayscale',
+                                    textRendering: 'optimizeLegibility'
+                                  }}
+                                >
                                   ⚠️ Clientes en Riesgo ({errores.length})
                                 </Typography>
                                 {errores.map((notif, index) => (
@@ -1628,20 +2050,54 @@ export default function Clientes({ refreshTrigger = 0 }) {
                                     severity="warning"
                                     sx={{ 
                                       mb: 1,
-                                      bgcolor: theme.palette.warning.light,
-                                      border: `1px solid ${theme.palette.warning.main}`,
-                                      '& .MuiAlert-icon': { color: theme.palette.warning.dark },
+                                      borderRadius: 2,
+                                      bgcolor: theme.palette.mode === 'dark' ? '#7f1d1d' : '#fee2e2',
+                                      border: `1px solid ${theme.palette.mode === 'dark' ? '#991b1b' : '#fca5a5'}`,
+                                      '& .MuiAlert-icon': { 
+                                        color: theme.palette.mode === 'dark' ? '#fca5a5' : '#dc2626' 
+                                      },
                                       '& .MuiAlert-message': { width: '100%' }
                                     }}
                                   >
                                     <Box>
-                                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                      <Typography 
+                                        variant="subtitle2" 
+                                        sx={{ 
+                                          fontWeight: 700, 
+                                          mb: 0.5,
+                                          color: 'text.primary',
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.titulo}
                                       </Typography>
-                                      <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          color: 'text.secondary', 
+                                          mb: 1,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.mensaje}
                                       </Typography>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                      <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                          color: 'text.secondary',
+                                          opacity: 0.7,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.timestamp.toLocaleTimeString('es-ES', { 
                                           hour: '2-digit', 
                                           minute: '2-digit' 
@@ -1653,10 +2109,21 @@ export default function Clientes({ refreshTrigger = 0 }) {
                               </Box>
                             )}
 
-                            {/* Warnings */}
+                            {/* Warnings - Información */}
                             {warnings.length > 0 && (
                               <Box sx={{ mb: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.custom.info, mb: 1 }}>
+                                <Typography 
+                                  variant="subtitle2" 
+                                  sx={{ 
+                                    fontWeight: 700, 
+                                    color: theme.palette.mode === 'dark' ? '#93c5fd' : '#3b82f6',
+                                    mb: 1,
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                    WebkitFontSmoothing: 'antialiased',
+                                    MozOsxFontSmoothing: 'grayscale',
+                                    textRendering: 'optimizeLegibility'
+                                  }}
+                                >
                                   ℹ️ Información ({warnings.length})
                                 </Typography>
                                 {warnings.map((notif, index) => (
@@ -1665,20 +2132,54 @@ export default function Clientes({ refreshTrigger = 0 }) {
                                     severity="info"
                                     sx={{ 
                                       mb: 1,
-                                      bgcolor: theme.palette.info.light,
-                                      border: `1px solid ${theme.palette.info.main}`,
-                                      '& .MuiAlert-icon': { color: theme.palette.info.dark },
+                                      borderRadius: 2,
+                                      bgcolor: theme.palette.mode === 'dark' ? '#1e3a8a' : '#dbeafe',
+                                      border: `1px solid ${theme.palette.mode === 'dark' ? '#3b82f6' : '#93c5fd'}`,
+                                      '& .MuiAlert-icon': { 
+                                        color: theme.palette.mode === 'dark' ? '#93c5fd' : '#3b82f6' 
+                                      },
                                       '& .MuiAlert-message': { width: '100%' }
                                     }}
                                   >
                                     <Box>
-                                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                      <Typography 
+                                        variant="subtitle2" 
+                                        sx={{ 
+                                          fontWeight: 700, 
+                                          mb: 0.5,
+                                          color: 'text.primary',
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.titulo}
                                       </Typography>
-                                      <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          color: 'text.secondary', 
+                                          mb: 1,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.mensaje}
                                       </Typography>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                      <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                          color: 'text.secondary',
+                                          opacity: 0.7,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.timestamp.toLocaleTimeString('es-ES', { 
                                           hour: '2-digit', 
                                           minute: '2-digit' 
@@ -1690,10 +2191,21 @@ export default function Clientes({ refreshTrigger = 0 }) {
                               </Box>
                             )}
 
-                            {/* Info */}
+                            {/* Info - Información Adicional */}
                             {info.length > 0 && (
                               <Box sx={{ mb: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#3b82f6', mb: 1 }}>
+                                <Typography 
+                                  variant="subtitle2" 
+                                  sx={{ 
+                                    fontWeight: 700, 
+                                    color: theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb',
+                                    mb: 1,
+                                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                    WebkitFontSmoothing: 'antialiased',
+                                    MozOsxFontSmoothing: 'grayscale',
+                                    textRendering: 'optimizeLegibility'
+                                  }}
+                                >
                                   🔵 Información ({info.length})
                                 </Typography>
                                 {info.map((notif, index) => (
@@ -1702,17 +2214,54 @@ export default function Clientes({ refreshTrigger = 0 }) {
                                     severity="info"
                                     sx={{ 
                                       mb: 1,
+                                      borderRadius: 2,
+                                      bgcolor: theme.palette.mode === 'dark' ? '#1e40af' : '#eff6ff',
+                                      border: `1px solid ${theme.palette.mode === 'dark' ? '#3b82f6' : '#60a5fa'}`,
+                                      '& .MuiAlert-icon': { 
+                                        color: theme.palette.mode === 'dark' ? '#60a5fa' : '#2563eb' 
+                                      },
                                       '& .MuiAlert-message': { width: '100%' }
                                     }}
                                   >
                                     <Box>
-                                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                      <Typography 
+                                        variant="subtitle2" 
+                                        sx={{ 
+                                          fontWeight: 700, 
+                                          mb: 0.5,
+                                          color: 'text.primary',
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.titulo}
                                       </Typography>
-                                      <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
+                                      <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                          color: 'text.secondary', 
+                                          mb: 1,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.mensaje}
                                       </Typography>
-                                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                      <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                          color: 'text.secondary',
+                                          opacity: 0.7,
+                                          fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                                          WebkitFontSmoothing: 'antialiased',
+                                          MozOsxFontSmoothing: 'grayscale',
+                                          textRendering: 'optimizeLegibility'
+                                        }}
+                                      >
                                         {notif.timestamp.toLocaleTimeString('es-ES', { 
                                           hour: '2-digit', 
                                           minute: '2-digit' 
@@ -1731,7 +2280,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
                   
                   {notificaciones.length > 0 && (
                     <>
-                      <Divider sx={{ my: 2 }} />
+                      <Divider sx={{ my: 2, borderColor: theme.palette.divider }} />
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Button
                           variant="text"
@@ -1739,6 +2288,14 @@ export default function Clientes({ refreshTrigger = 0 }) {
                           onClick={() => {
                             console.log('Marcar todas como leídas');
                             handleNotificationsClose();
+                          }}
+                          sx={{
+                            color: 'text.secondary',
+                            fontWeight: 500,
+                            fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                            '&:hover': {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'
+                            }
                           }}
                         >
                           Marcar todas como leídas
@@ -1749,6 +2306,17 @@ export default function Clientes({ refreshTrigger = 0 }) {
                           onClick={() => {
                             console.log('Ver todas las notificaciones');
                             handleNotificationsClose();
+                          }}
+                          sx={{
+                            borderColor: theme.palette.divider,
+                            color: 'text.primary',
+                            fontWeight: 600,
+                            fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                            borderRadius: 2,
+                            '&:hover': {
+                              borderColor: theme.palette.primary.main,
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)'
+                            }
                           }}
                         >
                           Ver todas
@@ -2288,21 +2856,60 @@ export default function Clientes({ refreshTrigger = 0 }) {
               </Table>
             </TableContainer>
             {/* Paginación */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
-              <Button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} sx={{ minWidth: 36 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2, gap: 0.5, flexWrap: 'wrap' }}>
+              <Button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} size="small" sx={{ minWidth: 'auto', px: 1.5 }}>
                 Anterior
               </Button>
-              {[...Array(totalPaginas)].map((_, i) => (
-                <Button
-                  key={i + 1}
-                  onClick={() => setPagina(i + 1)}
-                  variant={pagina === i + 1 ? 'contained' : 'outlined'}
-                  sx={{ minWidth: 36, mx: 0.5 }}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-              <Button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} sx={{ minWidth: 36 }}>
+              {(() => {
+                const maxButtons = 7;
+                const halfButtons = Math.floor(maxButtons / 2);
+                let startPage = Math.max(1, pagina - halfButtons);
+                let endPage = Math.min(totalPaginas, startPage + maxButtons - 1);
+                
+                if (endPage - startPage < maxButtons - 1) {
+                  startPage = Math.max(1, endPage - maxButtons + 1);
+                }
+                
+                const pages = [];
+                if (startPage > 1) {
+                  pages.push(
+                    <Button key={1} onClick={() => setPagina(1)} variant={pagina === 1 ? 'contained' : 'outlined'} size="small" sx={{ minWidth: 32, px: 1 }}>
+                      1
+                    </Button>
+                  );
+                  if (startPage > 2) {
+                    pages.push(<Typography key="ellipsis1" sx={{ px: 0.5 }}>...</Typography>);
+                  }
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <Button
+                      key={i}
+                      onClick={() => setPagina(i)}
+                      variant={pagina === i ? 'contained' : 'outlined'}
+                      size="small"
+                      sx={{ minWidth: 32, px: 1 }}
+                    >
+                      {i}
+                    </Button>
+                  );
+                }
+                
+                if (endPage < totalPaginas) {
+                  if (endPage < totalPaginas - 1) {
+                    pages.push(<Typography key="ellipsis2" sx={{ px: 0.5 }}>...</Typography>);
+                  }
+                  pages.push(
+                    <Button key={totalPaginas} onClick={() => setPagina(totalPaginas)} variant={pagina === totalPaginas ? 'contained' : 'outlined'} size="small" sx={{ minWidth: 32, px: 1 }}>
+                      {totalPaginas}
+                    </Button>
+                  );
+                }
+                
+                return pages;
+              })()}
+              <Button onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))} disabled={pagina === totalPaginas} size="small" sx={{ minWidth: 'auto', px: 1.5 }}>
                 Siguiente
               </Button>
             </Box>

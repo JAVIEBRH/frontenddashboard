@@ -4,95 +4,228 @@
 // URL dinámica que funciona en desarrollo y producción
 const API_URL = import.meta.env.VITE_API_URL || 'https://backenddashboard-vh7d.onrender.com';
 
-// Log para debugging
-console.log('API_URL configurada:', API_URL);
+// Modo desarrollo (solo loguear en desarrollo)
+const IS_DEV = import.meta.env.DEV;
+
+// Log para debugging solo en desarrollo
+if (IS_DEV) {
+  console.log('API_URL configurada:', API_URL);
+}
+
+// Helper para hacer fetch con retry automático
+async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(90000) // Timeout de 90 segundos (Render free puede tardar en despertar)
+      });
+      
+      if (response.ok) {
+        if (attempt > 1 && IS_DEV) {
+          console.log(`✅ Request exitoso después de ${attempt} intentos`);
+        }
+        return response;
+      }
+      
+      // Si es 4xx (error del cliente), no reintentar
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      // Si es 5xx (error del servidor), reintentar
+      throw new Error(`Error del servidor ${response.status}: ${response.statusText}`);
+      
+    } catch (error) {
+      lastError = error;
+      
+      // Si es error de aborto (timeout), reintentar
+      if (error.name === 'AbortError') {
+        if (IS_DEV) {
+          console.warn(`⏱️ Timeout en intento ${attempt}/${maxRetries}, reintentando...`);
+        }
+      } else if (error.message?.includes('Error del servidor')) {
+        if (IS_DEV) {
+          console.warn(`⚠️ Error del servidor en intento ${attempt}/${maxRetries}, reintentando...`);
+        }
+      } else {
+        // Error de red u otro error, no reintentar si es el último intento
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        if (IS_DEV) {
+          console.warn(`⚠️ Error de red en intento ${attempt}/${maxRetries}, reintentando...`);
+        }
+      }
+      
+      // Esperar antes de reintentar (exponential backoff)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      }
+    }
+  }
+  
+  throw lastError;
+}
 
 export async function getPedidos() {
   try {
-    console.log('Intentando obtener pedidos desde:', `${API_URL}/pedidos`);
-    const res = await fetch(`${API_URL}/pedidos`);
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    if (IS_DEV) {
+      console.log('Intentando obtener pedidos desde:', `${API_URL}/pedidos`);
     }
+    const res = await fetchWithRetry(`${API_URL}/pedidos`);
     const data = await res.json();
-    console.log('Pedidos obtenidos exitosamente:', data.length, 'registros');
+    
+    // Validar estructura de datos
+    if (!Array.isArray(data)) {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de pedidos no es un array, retornando array vacío');
+      }
+      return [];
+    }
+    
+    if (IS_DEV) {
+      console.log('Pedidos obtenidos exitosamente:', data.length, 'registros');
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo pedidos:', error);
-    throw error;
+    // Retornar array vacío en lugar de lanzar error para evitar crashes
+    return [];
   }
 }
 
 export async function getPedidosV2() {
   try {
-    console.log('Intentando obtener pedidos v2 desde:', `${API_URL}/pedidos-v2`);
-    const res = await fetch(`${API_URL}/pedidos-v2`);
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    if (IS_DEV) {
+      console.log('Intentando obtener pedidos v2 desde:', `${API_URL}/pedidos-v2`);
     }
+    const res = await fetchWithRetry(`${API_URL}/pedidos-v2`);
     const data = await res.json();
-    console.log('Pedidos v2 obtenidos exitosamente:', data.length, 'registros');
+    
+    if (!Array.isArray(data)) {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de pedidos v2 no es un array, retornando array vacío');
+      }
+      return [];
+    }
+    
+    if (IS_DEV) {
+      console.log('Pedidos v2 obtenidos exitosamente:', data.length, 'registros');
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo pedidos v2:', error);
-    throw error;
+    return [];
   }
 }
 
 export async function getClientes() {
   try {
-    console.log('Intentando obtener clientes desde:', `${API_URL}/clientes`);
-    const res = await fetch(`${API_URL}/clientes`);
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    if (IS_DEV) {
+      console.log('Intentando obtener clientes desde:', `${API_URL}/clientes`);
     }
+    const res = await fetchWithRetry(`${API_URL}/clientes`);
     const data = await res.json();
-    console.log('Clientes obtenidos exitosamente:', data.length, 'registros');
     
-    // Buscar específicamente a Walker para debugging
-    const walker = data.find(c => c.usuario === 'walker0726@fluvi.cl');
-    if (walker) {
-      console.log('Walker encontrado en datos:', walker);
-    } else {
-      console.log('Walker NO encontrado en datos del backend');
+    if (!Array.isArray(data)) {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de clientes no es un array, retornando array vacío');
+      }
+      return [];
+    }
+    
+    if (IS_DEV) {
+      console.log('Clientes obtenidos exitosamente:', data.length, 'registros');
+      // Buscar específicamente a Walker solo en desarrollo
+      const walker = data.find(c => c.usuario === 'walker0726@fluvi.cl' || c.correo === 'walker0726@fluvi.cl');
+      if (walker) {
+        console.log('Walker encontrado en datos:', walker);
+      } else {
+        console.log('Walker NO encontrado en datos del backend');
+      }
     }
     
     return data;
   } catch (error) {
     console.error('Error obteniendo clientes:', error);
-    throw error;
+    return [];
   }
 }
 
 export async function getKpis() {
   try {
-    console.log('Intentando obtener KPIs desde:', `${API_URL}/kpis`);
-    const res = await fetch(`${API_URL}/kpis`);
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    if (IS_DEV) {
+      console.log('Intentando obtener KPIs desde:', `${API_URL}/kpis`);
     }
+    const res = await fetchWithRetry(`${API_URL}/kpis`);
     const data = await res.json();
-    console.log('KPIs obtenidos exitosamente');
+    
+    // Validar estructura básica de KPIs
+    if (!data || typeof data !== 'object') {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de KPIs inválida, retornando valores por defecto');
+      }
+      return {
+        ventas_mes: 0,
+        ventas_mes_pasado: 0,
+        total_pedidos_mes: 0,
+        total_pedidos_mes_pasado: 0,
+        total_litros_mes: 0,
+        litros_vendidos_mes_pasado: 0,
+        costos_reales: 0,
+        iva: 0,
+        punto_equilibrio: 0,
+        clientes_activos: 0,
+      };
+    }
+    
+    if (IS_DEV) {
+      console.log('KPIs obtenidos exitosamente');
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo KPIs:', error);
-    throw error;
+    // Retornar valores por defecto en lugar de lanzar error
+    return {
+      ventas_mes: 0,
+      ventas_mes_pasado: 0,
+      total_pedidos_mes: 0,
+      total_pedidos_mes_pasado: 0,
+      total_litros_mes: 0,
+      litros_vendidos_mes_pasado: 0,
+      costos_reales: 0,
+      iva: 0,
+      punto_equilibrio: 0,
+      clientes_activos: 0,
+    };
   }
 }
 
 export async function getPredictorInteligente(fecha, tipoCliente = 'residencial') {
   try {
-    console.log('Intentando obtener predicción inteligente para:', fecha, tipoCliente);
-    const res = await fetch(`${API_URL}/predictor-inteligente?fecha=${fecha}&tipo_cliente=${tipoCliente}`);
-    if (!res.ok) {
-      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    if (IS_DEV) {
+      console.log('Intentando obtener predicción inteligente para:', fecha, tipoCliente);
     }
+    const res = await fetchWithRetry(`${API_URL}/predictor-inteligente?fecha=${fecha}&tipo_cliente=${tipoCliente}`);
     const data = await res.json();
-    console.log('Predicción inteligente obtenida exitosamente:', data);
+    
+    if (IS_DEV) {
+      console.log('Predicción inteligente obtenida exitosamente:', data);
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo predicción inteligente:', error);
-    throw error;
+    // Retornar predicción vacía en lugar de lanzar error
+    return {
+      fecha: fecha,
+      tipo_cliente: tipoCliente,
+      pedidos_predichos: 0,
+      confianza: 0,
+      factores: {}
+    };
   }
 }
 
@@ -217,12 +350,20 @@ export async function getUltimasPredicciones(dias = 7) {
 
 export const getVentasDiarias = async () => {
   try {
-    const response = await fetch(`${API_URL}/ventas-diarias`);
-    if (!response.ok) {
-      throw new Error('Error al obtener ventas diarias');
-    }
+    const response = await fetchWithRetry(`${API_URL}/ventas-diarias`);
     const data = await response.json();
-    console.log('Ventas diarias obtenidas:', data);
+    
+    // Validar estructura de respuesta
+    if (!data || typeof data !== 'object') {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de ventas diarias inválida');
+      }
+      throw new Error('Respuesta inválida');
+    }
+    
+    if (IS_DEV) {
+      console.log('Ventas diarias obtenidas:', data);
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo ventas diarias:', error);
@@ -352,16 +493,60 @@ export const generarReporteEmail = async (email) => {
 
 export const getAnalisisRentabilidad = async () => {
   try {
-    const response = await fetch(`${API_URL}/rentabilidad/avanzado`);
-    if (!response.ok) {
-      throw new Error('Error al obtener análisis de rentabilidad');
+    if (IS_DEV) {
+      console.log('Obteniendo análisis de rentabilidad avanzado...');
     }
+    const response = await fetchWithRetry(`${API_URL}/rentabilidad/avanzado`);
     const data = await response.json();
-    console.log('Análisis de rentabilidad obtenido:', data);
+    
+    // Validar estructura de respuesta
+    if (!data || typeof data !== 'object') {
+      if (IS_DEV) {
+        console.warn('⚠️ Respuesta de análisis de rentabilidad inválida');
+      }
+      return {
+        error: 'Respuesta inválida',
+        metricas_principales: {},
+        analisis_avanzado: {},
+        insights: [],
+        recomendaciones: []
+      };
+    }
+    
+    if (IS_DEV) {
+      console.log('Análisis de rentabilidad avanzado obtenido:', data);
+    }
     return data;
   } catch (error) {
     console.error('Error obteniendo análisis de rentabilidad:', error);
-    return { error: 'Error obteniendo análisis' };
+    // Retornar estructura por defecto en lugar de error
+    return {
+      error: 'Error obteniendo análisis',
+      metricas_principales: {
+        ventas_mes: 0,
+        costos_totales: 0,
+        margen_neto_porcentaje: 0
+      },
+      analisis_avanzado: {
+        crecimiento: { mensual: 0, trimestral: 0, ventas_trimestre: 0 },
+        estacionalidad: { factor_estacional: 1, promedio_verano: 0, promedio_invierno: 0 },
+        proyecciones: { mes_1: 0, mes_2: 0, mes_3: 0, tendencia_mensual: 0 },
+        punto_equilibrio_dinamico: { actual: 0, optimista: 0, pesimista: 0 },
+        roi: { actual: 0, proyectado: 0 },
+        escenarios_rentabilidad: {
+          optimista: { margen: 0 },
+          actual: { margen: 0 },
+          pesimista: { margen: 0 }
+        }
+      },
+      datos_reales: {
+        precio_venta_bidon: 2000,
+        total_bidones_mes: 0,
+        punto_equilibrio_bidones: 0
+      },
+      insights: [],
+      recomendaciones: []
+    };
   }
 };
 
