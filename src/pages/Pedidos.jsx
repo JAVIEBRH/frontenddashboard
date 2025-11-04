@@ -11,7 +11,10 @@ export default function Pedidos({ refreshTrigger = 0 }) {
   const theme = useTheme();
   const [pedidos, setPedidos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState('2025-09-01'); // Fecha con datos por defecto
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const hoy = new Date();
+    return hoy.toISOString().split('T')[0]; // Fecha actual en formato YYYY-MM-DD
+  });
   const [pagina, setPagina] = useState(1);
   const pedidosPorPagina = 10;
   
