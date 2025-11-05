@@ -308,7 +308,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
   // Filtros de clientes (usar clientesConEstado) - Incluye búsqueda por dirección
   const filteredClientes = React.useMemo(() => {
     return clientesConEstado.filter(cliente => {
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = (searchTerm || '').toLowerCase();
       const matchesSearch = 
         (cliente.nombre || '').toLowerCase().includes(searchLower) ||
         (cliente.email || '').toLowerCase().includes(searchLower) ||
@@ -343,8 +343,16 @@ export default function Clientes({ refreshTrigger = 0 }) {
           getPedidos()
         ]);
 
+      // Validar que los datos sean arrays válidos
+      if (!Array.isArray(clientesDataRaw)) {
+        throw new Error('Los datos de clientes no son un array válido');
+      }
+      if (!Array.isArray(pedidosDataRaw)) {
+        throw new Error('Los datos de pedidos no son un array válido');
+      }
+
       // Adaptar pedidos primero para poder calcular estadísticas
-      const pedidosData = pedidosDataRaw.map((p, idx) => ({
+      const pedidosData = (pedidosDataRaw || []).map((p, idx) => ({
         id: idx + 1,
         usuario: p.usuario || '',
         empresa: p.nombrelocal || '',
@@ -356,7 +364,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
       }));
 
       // Adaptar clientes y calcular pedidos/total desde pedidosData
-      const clientesData = clientesDataRaw.map((c, idx) => {
+      const clientesData = (clientesDataRaw || []).map((c, idx) => {
         // El backend devuelve: nombre, correo, dire (no usuario)
         // Los pedidos tienen: usuario (email), dire
         // Buscar todos los pedidos de este cliente (por email/correo o dirección)
@@ -430,7 +438,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
           estado: calcularEstadoCliente(ultimaFechaPedido ? ultimaFechaPedido.toISOString().split('T')[0] : c.fecha),
           tipo: 'Regular', // Puedes mejorar esto si tienes lógica para VIP
           pedidos: totalPedidos,
-          total_comprado: totalComprado || c.monto_ultimo_pedido || 0,
+          total_comprado: totalComprado, // Usar siempre el total calculado de pedidos
           ultimo_pedido: ultimaFechaPedido ? ultimaFechaPedido.toISOString().split('T')[0] : (c.fecha || ''),
           // Guardar campos originales para debugging
           correo_original: c.correo,
@@ -512,7 +520,8 @@ export default function Clientes({ refreshTrigger = 0 }) {
       
       // Contar clientes con y sin dirección
       const clientesConDireccionTotal = clientesData.filter(c => c.direccion && c.direccion.trim() !== '').length;
-      console.log(`📊 Resumen: ${clientesConDireccionTotal} de ${clientesData.length} clientes tienen dirección (${Math.round(clientesConDireccionTotal/clientesData.length*100)}%)`);
+      const porcentajeConDireccion = clientesData.length > 0 ? Math.round((clientesConDireccionTotal/clientesData.length)*100) : 0;
+      console.log(`📊 Resumen: ${clientesConDireccionTotal} de ${clientesData.length} clientes tienen dirección (${porcentajeConDireccion}%)`);
       
       // Log de KPIs calculados
       const totalActivos = clientesData.filter(c => c.estado === 'Activo').length;
@@ -572,7 +581,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
     let timeoutId = null;
     let lastRefresh = 0;
     const DEBOUNCE_DELAY = 30000; // 30 segundos mínimo entre actualizaciones
-    const INTERVAL_TIME = 60000; // 1 minuto
+    const INTERVAL_TIME = 5 * 60 * 1000; // 5 minutos (estandarizado con Home)
     
     const debouncedCargarDatos = () => {
       const now = Date.now();
@@ -784,7 +793,8 @@ export default function Clientes({ refreshTrigger = 0 }) {
 
   // Filtrar VIP y Frecuencia según el filtro de estado (incluye búsqueda por dirección)
   const filteredVIP = React.useMemo(() => {
-    const searchLower = searchTermVIP.toLowerCase();
+    if (!Array.isArray(clientesVIP)) return [];
+    const searchLower = (searchTermVIP || '').toLowerCase();
     return clientesVIP.filter(cliente => 
       (filtroEstadoVIP === 'Todos' || cliente.estado === filtroEstadoVIP) &&
       ((cliente.nombre || '').toLowerCase().includes(searchLower) ||
@@ -817,7 +827,8 @@ export default function Clientes({ refreshTrigger = 0 }) {
   }
 
   const filteredFrecuencia = React.useMemo(() => {
-    const searchLower = searchTermFrecuencia.toLowerCase();
+    if (!Array.isArray(clientesFrecuencia)) return [];
+    const searchLower = (searchTermFrecuencia || '').toLowerCase();
     return clientesFrecuencia.filter(cliente => 
       (filtroEstadoFrecuencia === 'Todos' || cliente.estado === filtroEstadoFrecuencia) &&
       ((cliente.nombre || '').toLowerCase().includes(searchLower) ||
@@ -827,9 +838,9 @@ export default function Clientes({ refreshTrigger = 0 }) {
   }, [clientesFrecuencia, filtroEstadoFrecuencia, searchTermFrecuencia]);
 
   // Calcular clientes que están en ambas listas (VIP y Frecuencia)
-  const direccionesVIP = new Set(clientesVIP.map(c => (c.direccion || '').toLowerCase()));
-  const direccionesFrecuencia = new Set(clientesFrecuencia.map(c => (c.direccion || '').toLowerCase()));
-  const clientesVIPyFrecuencia = clientesVIP.filter(c => direccionesFrecuencia.has((c.direccion || '').toLowerCase()));
+  const direccionesVIP = new Set((clientesVIP || []).map(c => (c.direccion || '').toLowerCase()));
+  const direccionesFrecuencia = new Set((clientesFrecuencia || []).map(c => (c.direccion || '').toLowerCase()));
+  const clientesVIPyFrecuencia = (clientesVIP || []).filter(c => direccionesFrecuencia.has((c.direccion || '').toLowerCase()));
   const cantidadVIPyFrecuencia = clientesVIPyFrecuencia.length;
   const tooltipVIPyFrecuencia = clientesVIPyFrecuencia.map(c => c.direccion || 'Sin dirección').join('\n');
 
@@ -1099,11 +1110,11 @@ export default function Clientes({ refreshTrigger = 0 }) {
   );
 
   // Estadísticas rápidas
-  const totalClientes = clientes.length;
+  const totalClientes = clientesConEstado.length; // Usar clientesConEstado para consistencia
   const totalClientesActivos = clientesConEstado.filter(c => c.estado === 'Activo').length;
   const totalClientesVIP = clientes.filter(c => c.total_comprado > 0).length;
   const totalVentas = clientes.reduce((sum, c) => sum + (c.total_comprado || 0), 0);
-  // Calcular churn (clientes inactivos)
+  // Calcular churn (clientes inactivos) - usar clientesConEstado para consistencia
   const churnAbs = clientesConEstado.filter(c => c.estado === 'Inactivo').length;
   const churnPct = totalClientes > 0 ? Math.round((churnAbs / totalClientes) * 100) : 0;
 
@@ -1175,15 +1186,19 @@ export default function Clientes({ refreshTrigger = 0 }) {
   }).length;
 
   // Lista: Top 15 Ticket Promedio
-  const topTicketPromedio = [...clientesVIP, ...clientesFrecuencia]
-    .filter(c => c.pedidos > 0)
+  const topTicketPromedio = [...(clientesVIP || []), ...(clientesFrecuencia || [])]
+    .filter(c => c && c.pedidos > 0 && c.total_comprado > 0) // Validar que tenga pedidos y total > 0
     .reduce((acc, c) => {
       // Evitar duplicados por dirección
       if (!acc.some(x => (x.direccion || '').toLowerCase() === (c.direccion || '').toLowerCase())) acc.push(c);
       return acc;
     }, [])
-    .map(c => ({ ...c, ticketPromedio: c.total_comprado / c.pedidos }))
-    .sort((a, b) => b.ticketPromedio - a.ticketPromedio)
+    .map(c => ({ 
+      ...c, 
+      ticketPromedio: c.pedidos > 0 ? (c.total_comprado / c.pedidos) : 0 // Validar división por cero
+    }))
+    .filter(c => c.ticketPromedio > 0) // Solo clientes con ticket promedio válido
+    .sort((a, b) => (b.ticketPromedio || 0) - (a.ticketPromedio || 0))
     .slice(0, 15);
 
   // Lista: Top 15 Crecimiento (dinámico según período seleccionado)
@@ -1338,7 +1353,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
     }
 
     // Clientes VIP que no han comprado recientemente
-    const clientesVIPInactivos = clientesVIP.filter(c => c.estado === 'Inactivo');
+    const clientesVIPInactivos = (clientesVIP || []).filter(c => c.estado === 'Inactivo');
     if (clientesVIPInactivos.length > 0) {
       notificaciones.push({
         id: 'vip-inactivos',
@@ -1374,7 +1389,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
     }
 
     // Alertas de desarrollo de programa VIP
-    if (clientesVIP.length < 10) {
+    if ((clientesVIP || []).length < 10) {
       notificaciones.push({
         id: 'desarrollo-vip',
         tipo: 'info',
@@ -1445,15 +1460,15 @@ export default function Clientes({ refreshTrigger = 0 }) {
       }
     }
 
-    // Alertas de churn alto
-    const churnPct = totalClientes > 0 ? Math.round((clientesInactivos.length / totalClientes) * 100) : 0;
-    if (churnPct > 40) {
+    // Alertas de churn alto - usar churnAbs ya calculado para consistencia
+    const churnPctCalculado = totalClientes > 0 ? Math.round((churnAbs / totalClientes) * 100) : 0;
+    if (churnPctCalculado > 40) {
       notificaciones.push({
         id: 'churn-alto',
         tipo: 'error',
         titulo: 'Churn Alto',
-        mensaje: `Tasa de churn del ${churnPct}% - Requiere atención inmediata`,
-        porcentaje: churnPct,
+        mensaje: `Tasa de churn del ${churnPctCalculado}% - Requiere atención inmediata`,
+        porcentaje: churnPctCalculado,
         timestamp: new Date()
       });
     }
@@ -1542,8 +1557,8 @@ export default function Clientes({ refreshTrigger = 0 }) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clientesEnRiesgoData
-                    .sort((a, b) => b.diasSinComprar - a.diasSinComprar)
+                  {(clientesEnRiesgoData || [])
+                    .sort((a, b) => (b.diasSinComprar || 0) - (a.diasSinComprar || 0))
                     .map((cliente) => (
                     <TableRow key={cliente.id} sx={{ 
                       '&:hover': { 
@@ -1680,8 +1695,8 @@ export default function Clientes({ refreshTrigger = 0 }) {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clientesVipData
-                    .sort((a, b) => b.totalComprado - a.totalComprado)
+                  {(clientesVipData || [])
+                    .sort((a, b) => (b.totalComprado || 0) - (a.totalComprado || 0))
                     .map((cliente) => (
                     <TableRow key={cliente.id} sx={{ 
                       '&:hover': { 
@@ -2706,6 +2721,20 @@ export default function Clientes({ refreshTrigger = 0 }) {
           </Grid>
 
           {/* Tabla de Clientes Principal */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" sx={{ 
+              fontWeight: 700, 
+              color: 'text.primary',
+              mb: 2,
+              fontSize: '1.5rem',
+              fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale',
+              textRendering: 'optimizeLegibility'
+            }}>
+              Directorio de clientes
+            </Typography>
+          </Box>
           <Card sx={{ 
             bgcolor: 'background.paper',
             boxShadow: theme.shadows[1],
@@ -2733,7 +2762,7 @@ export default function Clientes({ refreshTrigger = 0 }) {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar sx={{ bgcolor: '#3b82f6' }}>
-                            {cliente.nombre.charAt(0)}
+                            {(cliente.nombre && cliente.nombre.length > 0) ? cliente.nombre.charAt(0).toUpperCase() : '?'}
                           </Avatar>
                           <Box>
                             <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.primary' }}>

@@ -7,8 +7,7 @@ const CircularProgressBar = ({ value, size = 120, stroke = 10, color = '#3b82f6'
   const circ = 2 * Math.PI * radius;
   // Permitir valores superiores al 100%
   const progressValue = Math.min(value, 200); // Máximo 200% para evitar overflow visual
-  // Si está en 100% o más, completar el círculo
-  const offset = progressValue >= 100 ? 0 : circ - (progressValue / 100) * circ;
+  const offset = circ - (progressValue / 100) * circ;
   return (
     <svg width={size} height={size}>
       <circle
@@ -46,14 +45,13 @@ const CircularProgressBar = ({ value, size = 120, stroke = 10, color = '#3b82f6'
           textRendering: 'optimizeLegibility'
         }}
       >
-        {`${Math.round(Math.min(value, 200))}%`}
+        {`${Math.min(value, 200)}%`}
       </text>
     </svg>
   );
 };
 
 const KpiMetaCard = ({
-  value = 75,
   currentValue = 0,
   targetValue = 500000,
   percentage = 0,
@@ -62,29 +60,18 @@ const KpiMetaCard = ({
   description = 'Progreso respecto a la meta establecida para este mes.'
 }) => {
   const theme = useTheme();
-  const [loading, setLoading] = useState(true);
-  const [metaData, setMetaData] = useState({
-    ventasActuales: 0,
-    meta: 500000, // Meta fija de $500,000
-    porcentajeCumplimiento: 0,
-    faltante: 0
-  });
-
-  useEffect(() => {
-    // Calcular el porcentaje directamente desde los valores actuales/meta
-    const meta = targetValue;
-    const ventasActuales = currentValue;
-    const porcentajeCumplimiento = meta > 0 ? (ventasActuales / meta) * 100 : 0;
-    const faltante = meta - ventasActuales;
-
-    setMetaData({
-      ventasActuales,
-      meta,
-      porcentajeCumplimiento,
-      faltante
-    });
-    setLoading(false);
-  }, [currentValue, targetValue, percentage]);
+  
+  // Calcular porcentaje de cumplimiento basado en los props recibidos
+  const porcentajeCumplimiento = targetValue > 0 
+    ? Math.min(200, Math.round((currentValue / targetValue) * 100))
+    : 0;
+  
+  const metaData = {
+    ventasActuales: currentValue,
+    meta: targetValue,
+    porcentajeCumplimiento: percentage > 0 ? percentage : porcentajeCumplimiento,
+    faltante: Math.max(0, targetValue - currentValue)
+  };
 
   const formatValue = (val) => {
     if (val >= 1000000) {
@@ -107,33 +94,6 @@ const KpiMetaCard = ({
   };
 
   const progressColor = getProgressColor(metaData.porcentajeCumplimiento);
-  
-  if (loading) {
-    return (
-      <Box sx={{
-        background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%)',
-        borderRadius: 4,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-        padding: 3,
-        minWidth: 'auto',
-        maxWidth: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: `1px solid ${theme.palette.mode === 'dark' 
-          ? 'rgba(255,255,255,0.08)' 
-          : 'rgba(0,0,0,0.08)'}`,
-        minHeight: 200
-      }}>
-        <Typography variant="body2" sx={{ color: '#9370db' }}>
-          Cargando meta de ventas...
-        </Typography>
-      </Box>
-    );
-  }
   
   return (
     <Box sx={{
@@ -307,7 +267,7 @@ const KpiMetaCard = ({
             fontWeight: 500
           }}
         >
-          Meta: {formatValue(metaData.meta)}
+          Actual: {formatValue(metaData.ventasActuales)}
         </Typography>
         <Typography 
           variant="caption" 
@@ -317,7 +277,7 @@ const KpiMetaCard = ({
             fontWeight: 500
           }}
         >
-          Actual: {formatValue(metaData.ventasActuales)}
+          Meta: {formatValue(metaData.meta)}
         </Typography>
       </Box>
     </Box>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getVentasHistoricas } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
+import InsightTooltip from './InsightTooltip';
 
 const VentasMensualesCard = ({ 
   title = 'Ventas Mensuales', 
   value = 0, 
+  previousValue = 0,
   subtitle = 'Este mes',
   percentageChange = 0,
   isPositive = true 
@@ -19,96 +20,20 @@ const VentasMensualesCard = ({
     tendencia_diaria: [],
     fecha_analisis: ''
   });
-  const [loading, setLoading] = useState(false);
+  // NO hacer cálculo interno - usar SOLO los props que vienen de Home.jsx
+  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
+  // Este componente solo debe mostrar el valor recibido
   
-  const fetchVentasMensuales = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasHistoricas();
-      
-      // Obtener el mes actual y anterior
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Mapear nombres de meses a números
-      const mesesMap = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-      };
-      
-      // Encontrar ventas del mes actual
-      const ventasMesActual = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesActual && item.ventas > 0;
-      });
-      
-      // Encontrar ventas del mes anterior
-      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-      const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-      const ventasMesAnterior = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesAnterior && item.ventas > 0;
-      });
-      
-      const ventasActual = ventasMesActual?.ventas || 0;
-      const ventasAnterior = ventasMesAnterior?.ventas || 0;
-      
-      const porcentajeCambio = ventasAnterior > 0 
-        ? ((ventasActual - ventasAnterior) / ventasAnterior) * 100 
-        : 0;
-      
-      // Generar tendencia mensual basada en datos históricos
-      const tendenciaMensual = [];
-      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      
-      // Obtener los últimos 6 meses de datos
-      for (let i = 5; i >= 0; i--) {
-        const mesIndex = (mesActual - i + 12) % 12;
-        const anio = mesActual - i < 0 ? anioActual - 1 : anioActual;
-        
-        const ventasMes = data.find(item => {
-          const mesNumero = mesesMap[item.name];
-          return mesNumero === mesIndex && item.ventas > 0;
-        });
-        
-        tendenciaMensual.push({
-          mes: mesesNombres[mesIndex],
-          ventas: ventasMes?.ventas || 0
-        });
-      }
-      
-      setVentasData({
-        // Fuente de verdad desde KPIs (prop "value")
-        ventas_mes_actual: value,
-        ventas_mes_anterior: ventasAnterior,
-        // Usar la varianza matemática entregada por el padre (KPIs)
-        porcentaje_cambio: percentageChange,
-        es_positivo: isPositive,
-        tendencia_mensual: tendenciaMensual,
-        fecha_analisis: hoy.toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo ventas mensuales:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    fetchVentasMensuales();
-  }, []);
-
   // Actualizar datos cuando cambien los props
   useEffect(() => {
     setVentasData(prev => ({
       ...prev,
       ventas_mes_actual: value,
+      ventas_mes_anterior: previousValue, // Usar el prop directamente
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
-  }, [value, percentageChange, isPositive]);
+  }, [value, previousValue, percentageChange, isPositive]);
   
   const formatValue = (val) => {
     if (val >= 1000000) {
@@ -136,11 +61,16 @@ const VentasMensualesCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Ventas mensuales:
-Mes actual: ${formatValue(ventasData.ventas_mes_actual)}
-Mes anterior: ${formatValue(ventasData.ventas_mes_anterior)}
-Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
-Gráfico: Últimos 6 meses`;
+  const tooltipContent = `📊 VENTAS MENSUALES
+
+💰 Mes actual: ${formatValue(ventasData.ventas_mes_actual)}
+📅 Mes anterior: ${formatValue(ventasData.ventas_mes_anterior || 0)}
+
+${ventasData.es_positivo ? '📈' : '📉'} Variación: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Ventas = Bidones vendidos × $2,000
+   Comparación: Mes actual vs Mes anterior completo
+   Basado en pedidos reales de ambos períodos`;
 
   return (
     <Box
@@ -169,7 +99,6 @@ Gráfico: Últimos 6 meses`;
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchVentasMensuales}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -190,7 +119,6 @@ Gráfico: Últimos 6 meses`;
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
@@ -207,7 +135,11 @@ Gráfico: Últimos 6 meses`;
               fontDisplay: 'swap'
             }}
           >
-            {formatValue(ventasData.ventas_mes_actual)}
+            {(() => {
+              const valorMostrado = formatValue(ventasData.ventas_mes_actual);
+              console.log('📊 VentasMensualesCard MOSTRANDO en pantalla:', valorMostrado, '(valor numérico:', ventasData.ventas_mes_actual, ')');
+              return valorMostrado;
+            })()}
           </Typography>
           <Typography 
             variant="body2" 
@@ -225,10 +157,9 @@ Gráfico: Últimos 6 meses`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%`}
@@ -255,7 +186,7 @@ Gráfico: Últimos 6 meses`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia mensual */}

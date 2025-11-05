@@ -1,0 +1,146 @@
+{
+  "hash": "76418bc8",
+  "browserHash": "4106088e",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "dccd06a2",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "adb9796c",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "169c0b1f",
+      "needsInterop": false
+    },
+    "@mui/material/styles": {
+      "src": "../../node_modules/@mui/material/esm/styles/index.js",
+      "file": "@mui_material_styles.js",
+      "fileHash": "5019128b",
+      "needsInterop": false
+    },
+    "@mui/material": {
+      "src": "../../node_modules/@mui/material/esm/index.js",
+      "file": "@mui_material.js",
+      "fileHash": "e1e8f5e3",
+      "needsInterop": false
+    },
+    "@mui/icons-material": {
+      "src": "../../node_modules/@mui/icons-material/esm/index.js",
+      "file": "@mui_icons-material.js",
+      "fileHash": "8b533b6f",
+      "needsInterop": false
+    },
+    "@mui/icons-material/Search": {
+      "src": "../../node_modules/@mui/icons-material/esm/Search.js",
+      "file": "@mui_icons-material_Search.js",
+      "fileHash": "5fb41429",
+      "needsInterop": false
+    },
+    "@mui/material/Avatar": {
+      "src": "../../node_modules/@mui/material/esm/Avatar/index.js",
+      "file": "@mui_material_Avatar.js",
+      "fileHash": "412e55a5",
+      "needsInterop": false
+    },
+    "@mui/material/Tooltip": {
+      "src": "../../node_modules/@mui/material/esm/Tooltip/index.js",
+      "file": "@mui_material_Tooltip.js",
+      "fileHash": "1b2c9a3c",
+      "needsInterop": false
+    },
+    "@mui/icons-material/LocalShipping": {
+      "src": "../../node_modules/@mui/icons-material/esm/LocalShipping.js",
+      "file": "@mui_icons-material_LocalShipping.js",
+      "fileHash": "998c7793",
+      "needsInterop": false
+    },
+    "@mui/icons-material/Inventory": {
+      "src": "../../node_modules/@mui/icons-material/esm/Inventory.js",
+      "file": "@mui_icons-material_Inventory.js",
+      "fileHash": "26d71a89",
+      "needsInterop": false
+    },
+    "recharts": {
+      "src": "../../node_modules/recharts/es6/index.js",
+      "file": "recharts.js",
+      "fileHash": "eef37714",
+      "needsInterop": false
+    },
+    "@mui/icons-material/Add": {
+      "src": "../../node_modules/@mui/icons-material/esm/Add.js",
+      "file": "@mui_icons-material_Add.js",
+      "fileHash": "de0d9dda",
+      "needsInterop": false
+    },
+    "react-leaflet": {
+      "src": "../../node_modules/react-leaflet/lib/index.js",
+      "file": "react-leaflet.js",
+      "fileHash": "89bb1ce2",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-TWOYP655": {
+      "file": "chunk-TWOYP655.js"
+    },
+    "chunk-HLOZ3OPU": {
+      "file": "chunk-HLOZ3OPU.js"
+    },
+    "chunk-B32UMRA6": {
+      "file": "chunk-B32UMRA6.js"
+    },
+    "chunk-3MARAVCL": {
+      "file": "chunk-3MARAVCL.js"
+    },
+    "chunk-QZJZQWQY": {
+      "file": "chunk-QZJZQWQY.js"
+    },
+    "chunk-ESOG3OMA": {
+      "file": "chunk-ESOG3OMA.js"
+    },
+    "chunk-S3IAKHGA": {
+      "file": "chunk-S3IAKHGA.js"
+    },
+    "chunk-YJIBR5PZ": {
+      "file": "chunk-YJIBR5PZ.js"
+    },
+    "chunk-C6WWHQR7": {
+      "file": "chunk-C6WWHQR7.js"
+    },
+    "chunk-F62MBSWT": {
+      "file": "chunk-F62MBSWT.js"
+    },
+    "chunk-C2RALMRI": {
+      "file": "chunk-C2RALMRI.js"
+    },
+    "chunk-S2RKTOFV": {
+      "file": "chunk-S2RKTOFV.js"
+    },
+    "chunk-UYAKKK3U": {
+      "file": "chunk-UYAKKK3U.js"
+    },
+    "chunk-BEUHKDXM": {
+      "file": "chunk-BEUHKDXM.js"
+    },
+    "chunk-BXZJFTKO": {
+      "file": "chunk-BXZJFTKO.js"
+    },
+    "chunk-T3JKU6IG": {
+      "file": "chunk-T3JKU6IG.js"
+    },
+    "chunk-SALJWVAH": {
+      "file": "chunk-SALJWVAH.js"
+    },
+    "chunk-A3BSA5W6": {
+      "file": "chunk-A3BSA5W6.js"
+    }
+  }
+}

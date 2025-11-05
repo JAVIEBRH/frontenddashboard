@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, InputAdornment, Chip, Button, useTheme } from '@mui/material';
+import { Box, Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, InputAdornment, Chip, Button, useTheme, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import { Add } from '@mui/icons-material';
 import { getPedidos, getPedidosV2 } from '../services/api';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
@@ -17,6 +18,11 @@ export default function Pedidos({ refreshTrigger = 0 }) {
   });
   const [pagina, setPagina] = useState(1);
   const pedidosPorPagina = 10;
+  
+  // Estados para controlar los modales de métodos de pago
+  const [showEfectivoTable, setShowEfectivoTable] = useState(false);
+  const [showTransferenciaTable, setShowTransferenciaTable] = useState(false);
+  const [showTarjetaTable, setShowTarjetaTable] = useState(false);
   
 
 
@@ -44,11 +50,11 @@ export default function Pedidos({ refreshTrigger = 0 }) {
   useEffect(() => {
     cargarPedidos();
     
-    // Actualización automática cada 10 minutos
+    // Actualización automática cada 5 minutos para mantener datos actualizados
     const interval = setInterval(() => {
-      console.log('Actualización automática de pedidos...');
+      console.log('⏰ Actualización automática de pedidos...', new Date().toLocaleTimeString());
       cargarPedidos();
-    }, 10 * 60 * 1000); // 10 minutos
+    }, 5 * 60 * 1000); // 5 minutos (estandarizado con Home)
 
     // Escuchar evento de actualización global
     const handleGlobalRefresh = () => {
@@ -228,6 +234,240 @@ export default function Pedidos({ refreshTrigger = 0 }) {
     return sum + cantidad; // Removido Math.max(1, cantidad) para usar el cálculo real
   }, 0);
 
+  // Función para formatear ticket promedio
+  const formatTicketPromedio = (ticket) => {
+    if (ticket >= 1000000) {
+      return `$${(ticket / 1000000).toFixed(1)}M`;
+    } else if (ticket >= 1000) {
+      return `$${(ticket / 1000).toFixed(1)}K`;
+    } else {
+      return `$${ticket.toLocaleString('es-CL')}`;
+    }
+  };
+
+  // Función para agrupar clientes por método de pago
+  const agruparClientesPorMetodoPago = (metodoPago) => {
+    const pedidosFiltrados = pedidosFechaSeleccionadaCompletos.filter(p => {
+      const metodo = (p.metodopago || p.paymentMethod || '').toLowerCase();
+      return metodo.includes(metodoPago.toLowerCase());
+    });
+
+    // Agrupar por cliente (usando email o dirección como identificador)
+    const clientesMap = new Map();
+    
+    pedidosFiltrados.forEach(pedido => {
+      const clienteId = pedido.email || pedido.customer?.email || pedido.dire || pedido.customer?.address || pedido.usuario || pedido.customer?.name || 'Sin identificar';
+      const nombreCliente = pedido.usuario || pedido.customer?.name || 'Sin nombre';
+      const direccion = pedido.dire || pedido.customer?.address || 'Sin dirección';
+      const email = pedido.email || pedido.customer?.email || 'Sin email';
+      const precio = Number(pedido.precio || pedido.price || 0);
+
+      if (clientesMap.has(clienteId)) {
+        const cliente = clientesMap.get(clienteId);
+        cliente.totalComprado += precio;
+        cliente.pedidos += 1;
+      } else {
+        clientesMap.set(clienteId, {
+          id: clienteId,
+          nombre: nombreCliente,
+          direccion: direccion,
+          email: email,
+          totalComprado: precio,
+          pedidos: 1
+        });
+      }
+    });
+
+    // Convertir a array y calcular ticket promedio
+    return Array.from(clientesMap.values()).map(cliente => ({
+      ...cliente,
+      ticketPromedio: cliente.totalComprado / cliente.pedidos
+    }));
+  };
+
+  // Componente de modal para clientes por método de pago
+  const TablaClientesPorMetodoPago = ({ show, metodoPago, titulo }) => {
+    if (!show) return null;
+    
+    const clientesData = agruparClientesPorMetodoPago(metodoPago);
+    
+    return (
+      <Box sx={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '90vw',
+        maxWidth: '1200px',
+        maxHeight: '80vh',
+        zIndex: 1000,
+        transition: 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        opacity: 1,
+        pointerEvents: 'auto',
+        filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.15))'
+      }}>
+        <Card sx={{ 
+          bgcolor: theme.palette.background.paper, 
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.2)', 
+          borderRadius: 3, 
+          border: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden',
+          maxHeight: '60vh',
+          width: '100%',
+          backdropFilter: 'blur(10px)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+            pointerEvents: 'none',
+            zIndex: -1
+          }
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>
+                {titulo} - Detalle
+              </Typography>
+              <Tooltip title="Cerrar" arrow>
+                <IconButton
+                  onClick={() => {
+                    if (metodoPago.toLowerCase().includes('efectivo')) setShowEfectivoTable(false);
+                    else if (metodoPago.toLowerCase().includes('transfer')) setShowTransferenciaTable(false);
+                    else if (metodoPago.toLowerCase().includes('tarjeta')) setShowTarjetaTable(false);
+                  }}
+                  sx={{
+                    bgcolor: 'rgba(0,0,0,0.05)',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' }
+                  }}
+                >
+                  <Add sx={{
+                    color: theme.palette.text.secondary,
+                    fontSize: 20,
+                    transform: 'rotate(45deg)',
+                    transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    cursor: 'pointer'
+                  }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            <TableContainer sx={{ maxHeight: '60vh' }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : '#f8fafc' }}>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, width: '40px', fontSize: '1rem' }}>
+                      Estado
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1rem' }}>
+                      Cliente / Email
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1rem' }}>
+                      Dirección
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1rem' }}>
+                      Total Comprado
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1rem' }}>
+                      Pedidos
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1rem' }}>
+                      Ticket Promedio
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {clientesData
+                    .sort((a, b) => b.totalComprado - a.totalComprado)
+                    .map((cliente) => (
+                    <TableRow key={cliente.id} sx={{ 
+                      '&:hover': { 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' 
+                      },
+                      transition: 'background-color 0.2s ease'
+                    }}>
+                      <TableCell>
+                        <Tooltip title="Cliente activo" arrow>
+                          <Box sx={{ 
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: '#22c55e',
+                            border: '2px solid #16a34a',
+                            boxShadow: '0 2px 4px rgba(34, 197, 94, 0.3)'
+                          }} />
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={`${cliente.nombre} - ${cliente.email}`} arrow>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '1.1rem' }}>
+                              {cliente.nombre}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '1rem' }}>
+                              {cliente.email}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: '1rem' }}>
+                          {cliente.direccion}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={`Total comprado: ${formatTicketPromedio(cliente.totalComprado)}`} arrow>
+                          <Typography variant="body2" sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontWeight: 800, 
+                            fontSize: '1.2rem',
+                            letterSpacing: '0.1em',
+                            fontFamily: 'monospace'
+                          }}>
+                            {formatTicketPromedio(cliente.totalComprado)}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={`Número de pedidos: ${cliente.pedidos}`} arrow>
+                          <Typography variant="body2" sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontWeight: 800, 
+                            fontSize: '1.2rem',
+                            letterSpacing: '0.1em',
+                            fontFamily: 'monospace'
+                          }}>
+                            {cliente.pedidos}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={`Ticket promedio: ${formatTicketPromedio(cliente.ticketPromedio)}`} arrow>
+                          <Typography variant="body2" sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontWeight: 800, 
+                            fontSize: '1.2rem',
+                            letterSpacing: '0.1em',
+                            fontFamily: 'monospace'
+                          }}>
+                            {formatTicketPromedio(cliente.ticketPromedio)}
+                          </Typography>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  };
+
   return (
     <Box sx={{ 
       maxWidth: 1400, 
@@ -301,69 +541,216 @@ export default function Pedidos({ refreshTrigger = 0 }) {
                 }}>Ventas Totales</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ 
-              minWidth: 180, 
-              bgcolor: 'background.paper', 
-              boxShadow: theme.shadows[1], 
-              borderRadius: 3, 
-              border: `1px solid ${theme.palette.divider}` 
-            }}>
-              <CardContent sx={{ p: 3 }}>
-                <Tooltip title={`Pedidos pagados en efectivo el ${new Date(selectedDate).toLocaleDateString('es-ES')}`} placement="top" arrow>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', cursor: 'pointer' }}>{countEfectivo}</Typography>
-                </Tooltip>
-                <Typography variant="body1" sx={{ 
-                  color: 'text.primary', 
-                  fontWeight: 600,
-                  fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
-                  WebkitFontSmoothing: 'antialiased',
-                  MozOsxFontSmoothing: 'grayscale',
-                  textRendering: 'optimizeLegibility'
-                }}>Efectivo</Typography>
-              </CardContent>
-            </Card>
-            <Card sx={{ 
-              minWidth: 180, 
-              bgcolor: 'background.paper', 
-              boxShadow: theme.shadows[1], 
-              borderRadius: 3, 
-              border: `1px solid ${theme.palette.divider}` 
-            }}>
-              <CardContent sx={{ p: 3 }}>
-                <Tooltip title={`Pedidos pagados por transferencia el ${new Date(selectedDate).toLocaleDateString('es-ES')}`} placement="top" arrow>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', cursor: 'pointer' }}>{countTransferencia}</Typography>
-                </Tooltip>
-                <Typography variant="body1" sx={{ 
-                  color: 'text.primary', 
-                  fontWeight: 600,
-                  fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
-                  WebkitFontSmoothing: 'antialiased',
-                  MozOsxFontSmoothing: 'grayscale',
-                  textRendering: 'optimizeLegibility'
-                }}>Transferencia</Typography>
-              </CardContent>
-            </Card>
-            <Card sx={{ 
-              minWidth: 180, 
-              bgcolor: 'background.paper', 
-              boxShadow: theme.shadows[1], 
-              borderRadius: 3, 
-              border: `1px solid ${theme.palette.divider}` 
-            }}>
-              <CardContent sx={{ p: 3 }}>
-                <Tooltip title={`Pedidos pagados con tarjeta el ${new Date(selectedDate).toLocaleDateString('es-ES')}`} placement="top" arrow>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', cursor: 'pointer' }}>{countTarjeta}</Typography>
-                </Tooltip>
-                <Typography variant="body1" sx={{ 
-                  color: 'text.primary', 
-                  fontWeight: 600,
-                  fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
-                  WebkitFontSmoothing: 'antialiased',
-                  MozOsxFontSmoothing: 'grayscale',
-                  textRendering: 'optimizeLegibility'
-                }}>Tarjeta</Typography>
-              </CardContent>
-            </Card>
+            <Box sx={{ position: 'relative' }}>
+              <Card sx={{ 
+                minWidth: 180, 
+                bgcolor: showEfectivoTable ? theme.palette.primary.main : 'background.paper',
+                boxShadow: showEfectivoTable ? theme.shadows[4] : theme.shadows[1],
+                borderRadius: 3,
+                border: `1px solid ${showEfectivoTable ? theme.palette.primary.main : theme.palette.divider}`,
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[3],
+                  borderColor: theme.palette.primary.main
+                }
+              }}
+              onClick={() => setShowEfectivoTable(!showEfectivoTable)}
+              >
+                <CardContent sx={{ p: 3, position: 'relative' }}>
+                  <Tooltip title={`Pedidos pagados en efectivo el ${new Date(selectedDate).toLocaleDateString('es-ES')}. Click para ver detalles.`} placement="top" arrow>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 700, 
+                      color: showEfectivoTable ? 'white' : 'text.primary', 
+                      cursor: 'pointer',
+                      fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale',
+                      textRendering: 'optimizeLegibility'
+                    }}>{countEfectivo}</Typography>
+                  </Tooltip>
+                  <Typography variant="body1" sx={{ 
+                    color: showEfectivoTable ? 'white' : 'text.primary', 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                    WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
+                    textRendering: 'optimizeLegibility'
+                  }}>Efectivo</Typography>
+                  
+                  {/* Icono de expansión que rota */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    bgcolor: showEfectivoTable ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                    transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    '&:hover': {
+                      bgcolor: showEfectivoTable ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)',
+                      transform: 'scale(1.1)'
+                    }
+                  }}>
+                    <Add sx={{
+                      color: showEfectivoTable ? '#ef4444' : 'text.secondary',
+                      fontSize: 20,
+                      transform: showEfectivoTable ? 'rotate(45deg)' : 'rotate(0deg)',
+                      transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      cursor: 'pointer'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Tabla desplegable que emerge del card */}
+              <TablaClientesPorMetodoPago show={showEfectivoTable} metodoPago="efectivo" titulo="Efectivo" />
+            </Box>
+            <Box sx={{ position: 'relative' }}>
+              <Card sx={{ 
+                minWidth: 180, 
+                bgcolor: showTransferenciaTable ? theme.palette.primary.main : 'background.paper',
+                boxShadow: showTransferenciaTable ? theme.shadows[4] : theme.shadows[1],
+                borderRadius: 3,
+                border: `1px solid ${showTransferenciaTable ? theme.palette.primary.main : theme.palette.divider}`,
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[3],
+                  borderColor: theme.palette.primary.main
+                }
+              }}
+              onClick={() => setShowTransferenciaTable(!showTransferenciaTable)}
+              >
+                <CardContent sx={{ p: 3, position: 'relative' }}>
+                  <Tooltip title={`Pedidos pagados por transferencia el ${new Date(selectedDate).toLocaleDateString('es-ES')}. Click para ver detalles.`} placement="top" arrow>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 700, 
+                      color: showTransferenciaTable ? 'white' : 'text.primary', 
+                      cursor: 'pointer',
+                      fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale',
+                      textRendering: 'optimizeLegibility'
+                    }}>{countTransferencia}</Typography>
+                  </Tooltip>
+                  <Typography variant="body1" sx={{ 
+                    color: showTransferenciaTable ? 'white' : 'text.primary', 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                    WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
+                    textRendering: 'optimizeLegibility'
+                  }}>Transferencia</Typography>
+                  
+                  {/* Icono de expansión que rota */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    bgcolor: showTransferenciaTable ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                    transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    '&:hover': {
+                      bgcolor: showTransferenciaTable ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)',
+                      transform: 'scale(1.1)'
+                    }
+                  }}>
+                    <Add sx={{
+                      color: showTransferenciaTable ? '#ef4444' : 'text.secondary',
+                      fontSize: 20,
+                      transform: showTransferenciaTable ? 'rotate(45deg)' : 'rotate(0deg)',
+                      transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      cursor: 'pointer'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Tabla desplegable que emerge del card */}
+              <TablaClientesPorMetodoPago show={showTransferenciaTable} metodoPago="transferencia" titulo="Transferencia" />
+            </Box>
+            <Box sx={{ position: 'relative' }}>
+              <Card sx={{ 
+                minWidth: 180, 
+                bgcolor: showTarjetaTable ? theme.palette.primary.main : 'background.paper',
+                boxShadow: showTarjetaTable ? theme.shadows[4] : theme.shadows[1],
+                borderRadius: 3,
+                border: `1px solid ${showTarjetaTable ? theme.palette.primary.main : theme.palette.divider}`,
+                cursor: 'pointer',
+                transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[3],
+                  borderColor: theme.palette.primary.main
+                }
+              }}
+              onClick={() => setShowTarjetaTable(!showTarjetaTable)}
+              >
+                <CardContent sx={{ p: 3, position: 'relative' }}>
+                  <Tooltip title={`Pedidos pagados con tarjeta el ${new Date(selectedDate).toLocaleDateString('es-ES')}. Click para ver detalles.`} placement="top" arrow>
+                    <Typography variant="h4" sx={{ 
+                      fontWeight: 700, 
+                      color: showTarjetaTable ? 'white' : 'text.primary', 
+                      cursor: 'pointer',
+                      fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale',
+                      textRendering: 'optimizeLegibility'
+                    }}>{countTarjeta}</Typography>
+                  </Tooltip>
+                  <Typography variant="body1" sx={{ 
+                    color: showTarjetaTable ? 'white' : 'text.primary', 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                    WebkitFontSmoothing: 'antialiased',
+                    MozOsxFontSmoothing: 'grayscale',
+                    textRendering: 'optimizeLegibility'
+                  }}>Tarjeta</Typography>
+                  
+                  {/* Icono de expansión que rota */}
+                  <Box sx={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    bgcolor: showTarjetaTable ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                    transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    '&:hover': {
+                      bgcolor: showTarjetaTable ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)',
+                      transform: 'scale(1.1)'
+                    }
+                  }}>
+                    <Add sx={{
+                      color: showTarjetaTable ? '#ef4444' : 'text.secondary',
+                      fontSize: 20,
+                      transform: showTarjetaTable ? 'rotate(45deg)' : 'rotate(0deg)',
+                      transition: 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      cursor: 'pointer'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+              
+              {/* Tabla desplegable que emerge del card */}
+              <TablaClientesPorMetodoPago show={showTarjetaTable} metodoPago="tarjeta" titulo="Tarjeta" />
+            </Box>
             <Card sx={{ 
               minWidth: 180, 
               bgcolor: 'background.paper', 

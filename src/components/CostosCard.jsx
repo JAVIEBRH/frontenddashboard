@@ -1,106 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getVentasHistoricas } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
+import InsightTooltip from './InsightTooltip';
 
 const CostosCard = ({ 
   title = 'Costos', 
-  value = 8500000, 
+  value = 0, 
   subtitle = 'Este mes',
-  percentageChange = -5.2,
+  percentageChange = 0,
   isPositive = false 
 }) => {
   const theme = useTheme();
   const [costosData, setCostosData] = useState({
     costos_mes_actual: value,
-    costos_mes_anterior: 0,
     porcentaje_cambio: percentageChange,
-    es_positivo: isPositive,
-    tendencia_mensual: [],
-    fecha_analisis: ''
+    es_positivo: isPositive
   });
-  const [loading, setLoading] = useState(false);
   
-  const fetchCostosMensuales = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasHistoricas();
-      
-      // Obtener el mes actual y anterior
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Mapear nombres de meses a números
-      const mesesMap = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-      };
-      
-      // Encontrar costos del mes actual (usando ventas como proxy para costos)
-      const costosMesActual = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesActual && item.ventas > 0;
-      });
-      
-      // Encontrar costos del mes anterior
-      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-      const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-      const costosMesAnterior = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesAnterior && item.ventas > 0;
-      });
-      
-      // Calcular costos basados en ventas (aproximación)
-      const costosActual = costosMesActual?.ventas ? costosMesActual.ventas * 0.6 : 0; // 60% de ventas como costos
-      const costosAnterior = costosMesAnterior?.ventas ? costosMesAnterior.ventas * 0.6 : 0;
-      
-      const porcentajeCambio = costosAnterior > 0 
-        ? ((costosActual - costosAnterior) / costosAnterior) * 100 
-        : 0;
-      
-      // Generar tendencia mensual basada en datos históricos
-      const tendenciaMensual = [];
-      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      
-      // Obtener los últimos 6 meses de datos
-      for (let i = 5; i >= 0; i--) {
-        const mesIndex = (mesActual - i + 12) % 12;
-        const anio = mesActual - i < 0 ? anioActual - 1 : anioActual;
-        
-        const ventasMes = data.find(item => {
-          const mesNumero = mesesMap[item.name];
-          return mesNumero === mesIndex && item.ventas > 0;
-        });
-        
-        const costosMes = ventasMes?.ventas ? ventasMes.ventas * 0.6 : 0;
-        
-        tendenciaMensual.push({
-          mes: mesesNombres[mesIndex],
-          costos: costosMes
-        });
-      }
-      
-      setCostosData({
-        costos_mes_actual: costosActual,
-        costos_mes_anterior: costosAnterior,
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio <= 0, // Para costos, negativo es positivo
-        tendencia_mensual: tendenciaMensual,
-        fecha_analisis: hoy.toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo costos mensuales:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    fetchCostosMensuales();
-  }, []);
-
   // Actualizar datos cuando cambien los props
   useEffect(() => {
     setCostosData(prev => ({
@@ -121,27 +37,21 @@ const CostosCard = ({
     }
   };
 
-  // Generar puntos del gráfico de tendencia mensual
+  // Generar puntos del gráfico de tendencia mensual (gráfico simple)
   const generarPuntosGrafico = () => {
-    if (!costosData.tendencia_mensual || costosData.tendencia_mensual.length === 0) {
-      return "M0 30 Q20 20 40 25 T80 15 T120 20 T160 10 T200 15";
-    }
-    
-    const puntos = costosData.tendencia_mensual.map((mes, index) => {
-      const x = (index / (costosData.tendencia_mensual.length - 1)) * 200;
-      const maxCostos = Math.max(...costosData.tendencia_mensual.map(m => m.costos));
-      const y = maxCostos > 0 ? 40 - (mes.costos / maxCostos) * 30 : 30;
-      return `${x} ${y}`;
-    });
-    
-    return `M${puntos.join(' L')}`;
+    return "M0 30 Q20 20 40 25 T80 15 T120 20 T160 10 T200 15";
   };
 
-  const tooltipText = `Costos mensuales:
-Mes actual: ${formatValue(costosData.costos_mes_actual)}
-Mes anterior: ${formatValue(costosData.costos_mes_anterior)}
-Cambio: ${costosData.es_positivo ? '+' : ''}${costosData.porcentaje_cambio.toFixed(1)}%
-Gráfico: Últimos 6 meses`;
+  const tooltipContent = `💰 COSTOS MENSUALES
+
+💵 Costos actuales: ${formatValue(costosData.costos_mes_actual)}
+
+${costosData.es_positivo ? '📉' : '📈'} Variación: ${costosData.es_positivo ? '+' : ''}${costosData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Costos = $260,000 (cuota camión) + 
+   (Bidones vendidos × $60.69 por tapa unitaria)
+   
+   Fijo: $260,000 + Variable: Tapas × bidones`;
 
   return (
     <Box
@@ -170,7 +80,6 @@ Gráfico: Últimos 6 meses`;
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchCostosMensuales}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -191,7 +100,6 @@ Gráfico: Últimos 6 meses`;
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
@@ -226,10 +134,9 @@ Gráfico: Últimos 6 meses`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${costosData.es_positivo ? '+' : ''}${costosData.porcentaje_cambio.toFixed(1)}%`}
@@ -256,7 +163,7 @@ Gráfico: Últimos 6 meses`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia mensual */}
@@ -287,33 +194,6 @@ Gráfico: Últimos 6 meses`;
           </defs>
         </svg>
         
-        {/* Etiquetas de meses */}
-        {costosData.tendencia_mensual && costosData.tendencia_mensual.length > 0 && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mt: 0.5,
-            px: 1
-          }}>
-            {costosData.tendencia_mensual.map((mes, index) => (
-              <Typography 
-                key={index}
-                variant="caption" 
-                sx={{ 
-                  fontSize: '0.75rem',
-                  color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary',
-                  fontWeight: 500,
-                  WebkitFontSmoothing: 'antialiased',
-                  MozOsxFontSmoothing: 'grayscale',
-                  textRendering: 'optimizeLegibility',
-                  fontFeatureSettings: '"liga" 1, "kern" 1'
-                }}
-              >
-                {mes.mes}
-              </Typography>
-            ))}
-          </Box>
-        )}
       </Box>
     </Box>
   );

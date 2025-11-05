@@ -1,15 +1,18 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getVentasTotalesHistoricas } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
 import { formatCurrency } from '../utils/formatters';
+import InsightTooltip from './InsightTooltip';
 
 const VentasCard = ({ 
   title = 'Ventas Totales Históricas', 
   value = 0, 
   subtitle = 'Acumulado desde el inicio',
   percentageChange = 0,
-  isPositive = true 
+  isPositive = true,
+  fechaInicio = null,
+  fechaFin = null,
+  totalPedidos = 0
 }) => {
   const theme = useTheme();
   const [ventasData, setVentasData] = useState({
@@ -20,43 +23,9 @@ const VentasCard = ({
     tendencia_mensual: [],
     fecha_analisis: ''
   });
-  const [loading, setLoading] = useState(false);
-  
-  const fetchVentasHistoricas = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasTotalesHistoricas();
-      
-      // Calcular porcentaje de cambio basado en tendencia
-      // Como son ventas totales históricas, calculamos el crecimiento mensual
-      const ventasActuales = data.ventas_totales || 0;
-      const pedidosActuales = data.total_pedidos || 0;
-      
-      // Simular crecimiento basado en pedidos (más pedidos = más crecimiento)
-      const crecimientoEstimado = pedidosActuales > 1000 ? 15.2 : 8.5;
-      
-      setVentasData({
-        ventas_totales: ventasActuales,
-        total_pedidos: pedidosActuales,
-        porcentaje_cambio: crecimientoEstimado,
-        es_positivo: true,
-        tendencia_mensual: [
-          { mes: 'Ene', ventas: ventasActuales * 0.8 },
-          { mes: 'Feb', ventas: ventasActuales * 0.85 },
-          { mes: 'Mar', ventas: ventasActuales * 0.9 },
-          { mes: 'Abr', ventas: ventasActuales * 0.92 },
-          { mes: 'May', ventas: ventasActuales * 0.95 },
-          { mes: 'Jun', ventas: ventasActuales * 0.98 },
-          { mes: 'Jul', ventas: ventasActuales }
-        ],
-        fecha_analisis: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo ventas históricas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // NO hacer cálculo interno - usar SOLO el prop value que viene de Home.jsx
+  // El cálculo de ventas totales históricas se hace en Home.jsx
+  // Este componente solo debe mostrar el valor recibido
 
   // Actualizar datos cuando cambien los props
   useEffect(() => {
@@ -88,10 +57,39 @@ const VentasCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Ventas totales históricas:
-Total: ${formatValue(ventasData.ventas_totales)}
-Pedidos totales: ${ventasData.total_pedidos?.toLocaleString('es-CL') || 0}
-Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
+  // Formatear fechas para el tooltip
+  const formatearFecha = (fechaISO) => {
+    if (!fechaISO) return 'N/A';
+    try {
+      const fecha = new Date(fechaISO);
+      return fecha.toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
+  const tooltipContent = `💰 VENTAS TOTALES HISTÓRICAS
+
+💵 Total acumulado: ${formatValue(ventasData.ventas_totales)}
+
+${ventasData.es_positivo ? '📈' : '📉'} Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
+
+📅 Rango de datos:
+   Desde: ${formatearFecha(fechaInicio)}
+   Hasta: ${formatearFecha(fechaFin)}
+   
+📊 Total de pedidos: ${totalPedidos > 0 ? totalPedidos.toLocaleString('es-CL') : 'N/A'}
+
+💡 Cálculo: Suma de TODAS las ventas históricas
+   desde el inicio del negocio (sin restricciones)
+   
+   Incluye TODOS los pedidos históricos disponibles
+   Objetivo: Vista completa del flujo monetario histórico
+   Filtrado: Solo pedidos de "Aguas Ancud"`;
 
   return (
     <Box
@@ -120,7 +118,6 @@ Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchVentasHistoricas}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -141,7 +138,6 @@ Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
@@ -176,12 +172,11 @@ Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
-                     <Chip
+          <Chip
              label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%`}
             sx={{
               background: theme.palette.mode === 'dark' 
@@ -206,7 +201,7 @@ Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia mensual */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getVentasDiarias } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
+import InsightTooltip from './InsightTooltip';
 
 const VentasDiariasCard = ({ 
   title = 'Ventas Diarias', 
@@ -20,38 +20,29 @@ const VentasDiariasCard = ({
     tendencia_7_dias: [],
     tipo_comparacion: 'mensual'
   });
-  const [loading, setLoading] = useState(false);
+  // NO hacer cálculo interno - usar SOLO el prop value que viene de Home.jsx
+  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
+  // Este componente solo debe mostrar el valor recibido
   
-  const fetchVentasDiarias = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasDiarias();
-      setVentasData(data);
-    } catch (error) {
-      console.error('Error obteniendo ventas diarias:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Calcular valor del mismo día del mes anterior desde el porcentaje de cambio
+  const calcularValorAnterior = () => {
+    if (percentageChange === 0) return value;
+    if (percentageChange === 100 && value > 0) return 0; // Caso especial: aumento del 100%
+    return value / (1 + percentageChange / 100);
   };
+  
+  const ventasMismoDiaMesAnterior = calcularValorAnterior();
 
   // Actualizar datos cuando cambien los props
   useEffect(() => {
     setVentasData(prev => ({
       ...prev,
-      ventas_dia_actual: value,
+      ventas_hoy: value,
+      ventas_mismo_dia_mes_anterior: ventasMismoDiaMesAnterior,
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
-  }, [value, percentageChange, isPositive]);
-
-  useEffect(() => {
-    fetchVentasDiarias();
-    
-    // Actualizar cada 5 minutos
-    const interval = setInterval(fetchVentasDiarias, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  }, [value, percentageChange, isPositive, ventasMismoDiaMesAnterior]);
   
   const formatValue = (val) => {
     if (val >= 1000000) {
@@ -79,10 +70,16 @@ const VentasDiariasCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Comparación mensual:
-Hoy: ${formatValue(ventasData.ventas_hoy)}
-${ventasData.fecha_comparacion}: ${formatValue(ventasData.ventas_mismo_dia_mes_anterior)}
-Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
+  const tooltipContent = `📊 VENTAS DIARIAS
+
+💰 Hoy: ${formatValue(ventasData.ventas_hoy)}
+📅 Mismo día mes anterior: ${formatValue(ventasData.ventas_mismo_dia_mes_anterior || 0)}
+
+${ventasData.es_positivo ? '📈' : '📉'} Variación: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Ventas = Bidones vendidos × $2,000
+   Comparación: Hoy vs Mismo día del mes anterior
+   Basado en pedidos reales de ambos días`;
 
   return (
     <Box
@@ -111,7 +108,6 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchVentasDiarias}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -132,7 +128,6 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
@@ -167,10 +162,9 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`}
@@ -197,7 +191,7 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico real de últimos 7 días */}

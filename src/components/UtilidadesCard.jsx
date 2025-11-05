@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
 import { getVentasHistoricas } from '../services/api';
+import InsightTooltip from './InsightTooltip';
 
 const UtilidadesCard = ({ 
   title = 'Utilidades', 
@@ -147,11 +148,17 @@ const UtilidadesCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Utilidades mensuales:
-Mes actual: ${formatValue(utilidadesData.utilidades_mes_actual)}
-Mes anterior: ${formatValue(utilidadesData.utilidades_mes_anterior)}
-Cambio: ${utilidadesData.es_positivo ? '+' : ''}${utilidadesData.porcentaje_cambio.toFixed(1)}%
-Gráfico: Últimos 6 meses`;
+  const tooltipContent = `💰 UTILIDADES MENSUALES
+
+💵 Mes actual: ${formatValue(utilidadesData.utilidades_mes_actual)}
+📅 Mes anterior: ${formatValue(utilidadesData.utilidades_mes_anterior)}
+
+${utilidadesData.es_positivo ? '📈' : '📉'} Variación: ${utilidadesData.es_positivo ? '+' : ''}${utilidadesData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Utilidades = Ventas - Costos
+   
+   Ventas = Bidones × $2,000
+   Costos = $260,000 + (Bidones × $60.69)`;
 
   return (
     <Box
@@ -236,10 +243,9 @@ Gráfico: Últimos 6 meses`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${utilidadesData.es_positivo ? '+' : ''}${utilidadesData.porcentaje_cambio.toFixed(1)}%`}
@@ -266,7 +272,7 @@ Gráfico: Últimos 6 meses`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia mensual */}

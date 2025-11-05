@@ -37,6 +37,7 @@ import {
   Email,
   Info
 } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
 // Importar los mismos componentes del dashboard principal
 import VentasCard from '../components/VentasCard';
 import VentasMensualesCard from '../components/VentasMensualesCard';
@@ -340,6 +341,10 @@ const procesarDatosVentasLocales = (datos) => {
 export default function Local() {
   const theme = useTheme();
   const [loading, setLoading] = useState(true);
+  const [ventasLocales, setVentasLocales] = useState([]); // Almacenar datos completos de ventas locales
+  const [showEfectivoTable, setShowEfectivoTable] = useState(false);
+  const [showTransferenciaTable, setShowTransferenciaTable] = useState(false);
+  const [showTarjetaTable, setShowTarjetaTable] = useState(false);
   const [localData, setLocalData] = useState({
     // Información del local
     nombre: "Aguas Ancud - Local Principal",
@@ -467,8 +472,11 @@ export default function Local() {
 
     cargarDatosLocales();
     
-    // Actualización automática cada 10 minutos
-    const interval = setInterval(cargarDatosLocales, 10 * 60 * 1000);
+    // Actualización automática cada 5 minutos para mantener datos actualizados
+    const interval = setInterval(() => {
+      console.log('⏰ Actualización automática de datos locales...', new Date().toLocaleTimeString());
+      cargarDatosLocales();
+    }, 5 * 60 * 1000); // 5 minutos (estandarizado con Home)
 
     // Escuchar evento de actualización global
     const handleGlobalRefresh = () => {

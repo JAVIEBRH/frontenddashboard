@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
 import { getVentasHistoricas } from '../services/api';
+import InsightTooltip from './InsightTooltip';
 
 const IvaCard = ({ 
   title = 'IVA', 
@@ -141,11 +142,15 @@ const IvaCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `IVA mensual:
-Mes actual: ${formatValue(ivaData.iva_mes_actual)}
-Mes anterior: ${formatValue(ivaData.iva_mes_anterior)}
-Cambio: ${ivaData.es_positivo ? '+' : ''}${ivaData.porcentaje_cambio.toFixed(1)}%
-Gráfico: Últimos 6 meses`;
+  const tooltipContent = `📊 IVA MENSUAL
+
+💰 Mes actual: ${formatValue(ivaData.iva_mes_actual)}
+📅 Mes anterior: ${formatValue(ivaData.iva_mes_anterior)}
+
+${ivaData.es_positivo ? '📈' : '📉'} Variación: ${ivaData.es_positivo ? '+' : ''}${ivaData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: IVA = 19% de las ventas mensuales
+   Basado en ventas = Bidones × $2,000`;
 
   return (
     <Box
@@ -230,10 +235,9 @@ Gráfico: Últimos 6 meses`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${ivaData.es_positivo ? '+' : ''}${ivaData.porcentaje_cambio.toFixed(1)}%`}
@@ -260,7 +264,7 @@ Gráfico: Últimos 6 meses`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia mensual */}

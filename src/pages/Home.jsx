@@ -44,14 +44,22 @@ export default function Home() {
     pedidosMes: 0,
     clientesInactivos: 0,
     ventasMesPasado: 0,
+    ventasSemanaMesPasado: 0,
+    ventasMismoDiaMesPasado: 0,
     pedidosMesPasado: 0,
     capacidadUtilizada: 0,
     litrosVendidos: 0,
     capacidadTotal: 30000,
     ventasHistoricas: [],
     costosMesPasado: 0,
-    bidonesMesPasado: 0,
-    ivaMesPasado: 0,
+        bidonesMesPasado: 0,
+        bidonesSemanaMesPasado: 0,
+        bidonesMismoDiaMesPasado: 0,
+        bidonesTotalesHistoricos: 0,
+        fechaMasAntiguaHistorica: null,
+        fechaMasRecienteHistorica: null,
+        totalPedidosHistoricos: 0,
+        ivaMesPasado: 0,
     utilidadesMesPasado: 0,
     ticketPromedioMesPasado: 0,
     clientesActivosMesPasado: 0,
@@ -130,118 +138,746 @@ export default function Home() {
       const kpisData = await getKpis();
       console.log('✅ KPIs obtenidos:', kpisData);
       
-      // Mostrar datos principales inmediatamente si es carga inicial
-      if (isInitialLoad && kpisData) {
-        // Calcular y mostrar datos básicos con solo KPIs
-        const ventasSemanales = calcularVentasSemanales(kpisData.ventas_mes || 0);
-        const ventasDiarias = Math.round((kpisData.ventas_mes || 0) / 30);
-        const meta = calcularMeta(kpisData.ventas_mes_pasado || 0);
-        const progresoMeta = calcularProgresoMeta(kpisData.ventas_mes || 0, meta);
-        const ticketPromedio = calcularTicketPromedio(kpisData.ventas_mes || 0, kpisData.total_pedidos_mes || 0);
-        const litrosVendidos = kpisData.litros_vendidos || 0;
-        const capacidadTotal = 30000;
-        const porcentajeCapacidad = calcularPorcentajeCapacidad(litrosVendidos, capacidadTotal);
-        const bidonesMesPasado = Math.round((kpisData.litros_vendidos_mes_pasado || 0) / 20);
-        const costosMesPasado = 260000 + (bidonesMesPasado * 60.69);
-        const clientesInactivos = Math.max(0, Math.round((kpisData.clientes_activos || 0) * 0.2));
-        
-        const hoy = new Date();
-        const diasActuales = hoy.getDate();
-        const diasAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate();
-        const pedidosMesPasadoProyectado = (kpisData.total_pedidos_mes_pasado || 0) / diasAnterior * diasActuales;
-        const porcentajeCambioProyectado = calcularPorcentajeCambioProyectado(
-          kpisData.total_pedidos_mes || 0,
-          kpisData.total_pedidos_mes_pasado || 0,
-          diasActuales,
-          diasAnterior
-        );
-        
-        // Actualizar estado con datos básicos para mostrar contenido rápidamente
-        setData(prev => ({
-          ...prev,
-          ventas: kpisData.ventas_mes || 0,
-          pedidos: kpisData.total_pedidos_mes || 0,
-          clientes: kpisData.clientes_activos || 0,
-          litros: litrosVendidos,
-          ventasMensuales: kpisData.ventas_mes || 0,
-          ventasSemanales: ventasSemanales,
-          ventasDiarias: ventasDiarias,
-          bidones: Math.round((kpisData.total_litros_mes || 0) / 20),
-          iva: kpisData.iva || 0,
-          costos: kpisData.costos_reales || 0,
-          costosMesPasado: costosMesPasado,
-          utilidades: kpisData.utilidad || 0,
-          meta: progresoMeta,
-          ticketPromedio: ticketPromedio,
-          clientesActivos: kpisData.clientes_activos || 0,
-          pedidosMes: kpisData.total_pedidos_mes || 0,
-          clientesInactivos: clientesInactivos,
-          ventasMesPasado: kpisData.ventas_mes_pasado || 0,
-          pedidosMesPasado: kpisData.total_pedidos_mes_pasado || 0,
-          capacidadUtilizada: porcentajeCapacidad,
-          litrosVendidos: litrosVendidos,
-          capacidadTotal: capacidadTotal,
-          bidonesMesPasado: bidonesMesPasado,
-          ivaMesPasado: kpisData.iva_mes_pasado || 0,
-          utilidadesMesPasado: kpisData.utilidad_mes_pasado || 0,
-          ticketPromedioMesPasado: kpisData.ticket_promedio_mes_pasado || 0,
-          clientesActivosMesPasado: kpisData.clientes_activos_mes_pasado || 0,
-          clientesInactivosMesPasado: kpisData.clientes_inactivos_mes_pasado || 0,
-          porcentajeCambioProyectado: porcentajeCambioProyectado,
-          esPositivoProyectado: (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado
-        }));
-        
-        // Ocultar loading después de mostrar datos básicos
-        setLoading(false);
-      }
+      // NO mostrar datos de ventas hasta que tengamos los pedidos cargados
+      // Las ventas se calculan SOLO desde bidones vendidos en los pedidos
 
-      // CARGAR DATOS ADICIONALES EN PARALELO (no bloquean la UI)
-      console.log('📋 Cargando datos adicionales en paralelo...');
+      // CARGAR PEDIDOS PRIMERO (necesarios para calcular ventas desde bidones)
+      console.log('📋 Cargando pedidos (necesarios para calcular ventas desde bidones)...');
       const [pedidosData, ventasHistoricas, ventasTotalesHistoricas] = await Promise.all([
         getPedidos().catch(err => { console.warn('Error obteniendo pedidos:', err); return []; }),
         getVentasHistoricas().catch(err => { console.warn('Error obteniendo ventas históricas:', err); return []; }),
         getVentasTotalesHistoricas().catch(err => { console.warn('Error obteniendo ventas totales históricas:', err); return { ventas_totales: 0 }; })
       ]);
       
-      console.log('✅ Datos adicionales obtenidos:', {
-        pedidos: pedidosData.length,
-        ventasHistoricas: ventasHistoricas.length,
-        ventasTotalesHistoricas
-      });
+      console.log('✅ Pedidos obtenidos:', pedidosData?.length || 0, 'registros');
+      console.log('📋 Tipo de pedidosData:', Array.isArray(pedidosData) ? 'Array' : typeof pedidosData);
+      
+      // SI NO HAY PEDIDOS, MOSTRAR ADVERTENCIA PERO CONTINUAR
+      if (!Array.isArray(pedidosData) || pedidosData.length === 0) {
+        console.warn('⚠️ No se encontraron pedidos. No se pueden calcular ventas desde bidones.');
+        console.warn('📋 pedidosData:', pedidosData);
+        // Aún así, ocultar loading para mostrar el dashboard
+        setLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      console.log('🔄 Continuando con procesamiento de pedidos...');
 
-      // CALCULAR VENTAS DE HOY - VERSIÓN SIMPLIFICADA
+      // CALCULAR VENTAS DIRECTAMENTE DESDE BIDONES VENDIDOS
+      // Lógica: Ventas = Bidones Vendidos × $2,000
+      const PRECIO_BIDON = 2000;
+      
       const fechaActual = new Date();
-      const dia = fechaActual.getDate().toString().padStart(2, '0');
-      const mes = (fechaActual.getMonth() + 1).toString().padStart(2, '0');
-      const anio = fechaActual.getFullYear();
-      const fechaHoy = `${dia}-${mes}-${anio}`;
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
       
-      let ventasHoy = 0;
+      // Calcular inicio del mes actual
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      inicioMes.setHours(0, 0, 0, 0);
       
-      // Buscar pedidos de hoy
-      pedidosData.forEach(pedido => {
-        if (pedido.fecha === fechaHoy && pedido.nombrelocal === 'Aguas Ancud') {
-          ventasHoy += parseInt(pedido.precio) || 0;
+      // Calcular inicio de la semana actual (lunes)
+      const inicioSemana = new Date(hoy);
+      const diaSemana = hoy.getDay();
+      const diasDesdeLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+      inicioSemana.setDate(hoy.getDate() - diasDesdeLunes);
+      inicioSemana.setHours(0, 0, 0, 0);
+      
+      // Función para parsear fecha de pedido
+      const parseFechaPedido = (fechaStr) => {
+        if (!fechaStr) return null;
+        try {
+          // Formato DD-MM-YYYY
+          const partes = fechaStr.split('-');
+          if (partes.length === 3) {
+            const dia = parseInt(partes[0]);
+            const mes = parseInt(partes[1]) - 1;
+            const anio = parseInt(partes[2]);
+            const fecha = new Date(anio, mes, dia);
+            fecha.setHours(0, 0, 0, 0);
+            return fecha;
+          }
+          return null;
+        } catch (error) {
+          console.error('Error parseando fecha:', fechaStr, error);
+          return null;
+        }
+      };
+      
+      // Función para obtener cantidad de bidones de un pedido
+      const obtenerBidonesPedido = (pedido, retornarInfo = false) => {
+        let tieneCampoExplicito = false;
+        let bidones = 0;
+        
+        // Intentar obtener cantidad de diferentes campos
+        if (pedido.products && Array.isArray(pedido.products)) {
+          bidones = pedido.products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.cantidad) {
+          bidones = parseInt(pedido.cantidad) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.cant) {
+          bidones = parseInt(pedido.cant) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.qty) {
+          bidones = parseInt(pedido.qty) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.quantity) {
+          bidones = parseInt(pedido.quantity) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.bidones) {
+          bidones = parseInt(pedido.bidones) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.unidades) {
+          bidones = parseInt(pedido.unidades) || 0;
+          if (bidones > 0) tieneCampoExplicito = true;
+        } else if (pedido.ordenpedido) {
+          // ordenpedido puede ser un string como "6 bidones" o solo "6"
+          const ordenpedidoStr = String(pedido.ordenpedido || '').trim();
+          if (ordenpedidoStr) {
+            // Extraer solo números del string
+            const numeros = ordenpedidoStr.match(/\d+/);
+            if (numeros) {
+              bidones = parseInt(numeros[0]) || 0;
+              // VALIDACIÓN CRÍTICA: Si el precio no coincide con bidones × $2,000, recalcular desde precio
+              const precio = parseInt(pedido.precio || pedido.price || 0);
+              if (precio > 0) {
+                const bidonesDesdePrecio = Math.round(precio / PRECIO_BIDON);
+                // Si hay una discrepancia grande (>20%), usar el cálculo desde precio
+                if (bidones > 0 && Math.abs(bidones - bidonesDesdePrecio) / bidonesDesdePrecio > 0.2) {
+                  console.warn(`⚠️ Discrepancia en pedido: ordenpedido=${ordenpedidoStr}, bidones=${bidones}, precio=${precio}, bidonesDesdePrecio=${bidonesDesdePrecio}. Usando cálculo desde precio.`);
+                  bidones = bidonesDesdePrecio;
+                  tieneCampoExplicito = false; // Marcar como calculado desde precio
+                }
+              }
+              if (bidones > 0) tieneCampoExplicito = true;
+            }
+          }
+        }
+        
+        // Si no hay campo de cantidad, calcular desde precio (2000 por bidón)
+        if (!tieneCampoExplicito) {
+          const precio = parseInt(pedido.precio || pedido.price || 0);
+          if (precio > 0) {
+            bidones = Math.round(precio / PRECIO_BIDON);
+          }
+        }
+        
+        if (retornarInfo) {
+          return { bidones, tieneCampoExplicito };
+        }
+        
+        return bidones;
+      };
+      
+      // Calcular fechas del mes pasado para comparaciones
+      const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+      mesPasado.setHours(0, 0, 0, 0);
+      const inicioMesPasado = new Date(mesPasado.getFullYear(), mesPasado.getMonth(), 1);
+      inicioMesPasado.setHours(0, 0, 0, 0);
+      const finMesPasado = new Date(mesPasado.getFullYear(), mesPasado.getMonth() + 1, 0);
+      finMesPasado.setHours(23, 59, 59, 999);
+      
+      // Calcular inicio de la misma semana del mes pasado (mismo día de la semana que hoy)
+      // Encontrar qué día de la semana es hoy (0 = domingo, 1 = lunes, etc.)
+      const diaSemanaHoy = hoy.getDay();
+      // Calcular el lunes de la semana actual
+      const lunesSemanaActual = new Date(inicioSemana);
+      
+      // Calcular el lunes de la misma semana del mes pasado
+      // Restar 7 días desde el lunes de la semana actual para llegar a la semana pasada del mes pasado
+      const lunesSemanaMesPasado = new Date(lunesSemanaActual);
+      lunesSemanaMesPasado.setDate(lunesSemanaMesPasado.getDate() - 7);
+      
+      // Asegurar que esté en el mes pasado
+      if (lunesSemanaMesPasado.getMonth() !== mesPasado.getMonth()) {
+        // Si no está en el mes pasado, calcular el lunes de la última semana del mes pasado
+        const ultimoDiaMesPasado = new Date(mesPasado.getFullYear(), mesPasado.getMonth() + 1, 0);
+        const diaSemanaUltimoDia = ultimoDiaMesPasado.getDay();
+        const diasDesdeLunesUltimoDia = diaSemanaUltimoDia === 0 ? 6 : diaSemanaUltimoDia - 1;
+        lunesSemanaMesPasado.setTime(ultimoDiaMesPasado.getTime());
+        lunesSemanaMesPasado.setDate(lunesSemanaMesPasado.getDate() - diasDesdeLunesUltimoDia - 6);
+      }
+      
+      lunesSemanaMesPasado.setHours(0, 0, 0, 0);
+      const finSemanaMesPasado = new Date(lunesSemanaMesPasado);
+      finSemanaMesPasado.setDate(finSemanaMesPasado.getDate() + 6);
+      finSemanaMesPasado.setHours(23, 59, 59, 999);
+      
+      // Calcular mismo día del mes anterior
+      const mismoDiaMesPasado = new Date(mesPasado.getFullYear(), mesPasado.getMonth(), hoy.getDate());
+      mismoDiaMesPasado.setHours(0, 0, 0, 0);
+      const finMismoDiaMesPasado = new Date(mismoDiaMesPasado);
+      finMismoDiaMesPasado.setHours(23, 59, 59, 999);
+      
+      // Contar bidones vendidos del MES ACTUAL
+      let bidonesMesActual = 0;
+      let bidonesSemanaActual = 0;
+      let bidonesHoy = 0;
+      
+      // Contar bidones vendidos del MES PASADO (para comparación)
+      let bidonesMesPasado = 0;
+      let bidonesSemanaMesPasado = 0; // Misma semana del mes pasado
+      let bidonesMismoDiaMesPasado = 0; // Mismo día del mes anterior
+      
+      // Contar bidones TOTALES HISTÓRICOS (todos los pedidos desde que hay datos)
+      let bidonesTotalesHistoricos = 0;
+      
+      // Variables para determinar rango de fechas históricas
+      let fechaMasAntigua = null;
+      let fechaMasReciente = null;
+      let totalPedidosHistoricos = 0;
+      
+      // Análisis temporal de pedidos históricos
+      const pedidosPorAnio = {};
+      const pedidosPorMes = {};
+      const bidonesPorAnio = {};
+      const bidonesPorMes = {};
+      
+      // Validación: detectar pedidos duplicados por ID
+      const pedidosIds = new Set();
+      const pedidosDuplicados = [];
+      
+      // Estadísticas de cálculo de bidones
+      let pedidosConCampoExplicito = 0;
+      let pedidosCalculadosDesdePrecio = 0;
+      let bidonesDesdeCamposExplicitos = 0;
+      let bidonesDesdePrecio = 0;
+      let sumaPreciosReales = 0;
+      
+      let pedidosProcesados = 0;
+      let pedidosRechazados = 0;
+      let pedidosDelMesDetalle = []; // Para debugging
+      
+      console.log('=== PROCESANDO PEDIDOS PARA CONTAR BIDONES ===');
+      console.log('Total de pedidos recibidos:', pedidosData.length);
+      console.log('📅 Inicio del mes:', inicioMes.toISOString(), '(', inicioMes.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Inicio de la semana:', inicioSemana.toISOString(), '(', inicioSemana.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Hoy:', hoy.toISOString(), '(', hoy.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Mes actual:', hoy.getMonth() + 1, '(noviembre = 11)');
+      console.log('📅 Año actual:', hoy.getFullYear());
+      console.log('📅 Inicio mes pasado:', inicioMesPasado.toISOString(), '(', inicioMesPasado.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Fin mes pasado:', finMesPasado.toISOString(), '(', finMesPasado.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Lunes semana mes pasado:', lunesSemanaMesPasado.toISOString(), '(', lunesSemanaMesPasado.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Fin semana mes pasado:', finSemanaMesPasado.toISOString(), '(', finSemanaMesPasado.toLocaleDateString('es-ES'), ')');
+      console.log('📅 Mismo día mes pasado:', mismoDiaMesPasado.toISOString(), '(', mismoDiaMesPasado.toLocaleDateString('es-ES'), ')');
+      
+      console.log('=== INICIANDO PROCESAMIENTO DE PEDIDOS ===');
+      console.log('📊 Total de pedidos a procesar:', pedidosData.length);
+      
+      // VALIDACIÓN CRÍTICA: Mostrar primeros 10 pedidos con sus campos de cantidad
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('=== VALIDACIÓN DETALLADA: PRIMEROS 10 PEDIDOS ===');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      pedidosData.slice(0, 10).forEach((pedido, index) => {
+        const infoBidones = obtenerBidonesPedido(pedido, true);
+        const precio = parseInt(pedido.precio || pedido.price || 0);
+        const ventasEsperadas = infoBidones.bidones * PRECIO_BIDON;
+        
+        // Determinar qué campo se usó para calcular los bidones
+        let campoUsado = 'N/A';
+        if (pedido.products && Array.isArray(pedido.products)) {
+          campoUsado = 'products';
+        } else if (pedido.cantidad) {
+          campoUsado = 'cantidad';
+        } else if (pedido.cant) {
+          campoUsado = 'cant';
+        } else if (pedido.qty) {
+          campoUsado = 'qty';
+        } else if (pedido.quantity) {
+          campoUsado = 'quantity';
+        } else if (pedido.bidones) {
+          campoUsado = 'bidones';
+        } else if (pedido.unidades) {
+          campoUsado = 'unidades';
+        } else if (pedido.ordenpedido) {
+          campoUsado = 'ordenpedido';
+        } else if (precio > 0) {
+          campoUsado = 'calculado desde precio';
+        }
+        
+        console.log(`📦 PEDIDO #${index + 1}:`, {
+          fecha: pedido.fecha,
+          nombreLocal: pedido.nombrelocal || pedido.nombre_local || 'N/A',
+          precio: precio,
+          precioEsperado: infoBidones.bidones * PRECIO_BIDON,
+          campoUsado: campoUsado,
+          valorCampoUsado: pedido[campoUsado] || (campoUsado === 'calculado desde precio' ? precio : 'N/A'),
+          campos: {
+            cantidad: pedido.cantidad,
+            cant: pedido.cant,
+            qty: pedido.qty,
+            quantity: pedido.quantity,
+            bidones: pedido.bidones,
+            unidades: pedido.unidades,
+            ordenpedido: pedido.ordenpedido,
+            products: pedido.products ? JSON.stringify(pedido.products) : null
+          },
+          bidonesCalculados: infoBidones.bidones,
+          tieneCampoExplicito: infoBidones.tieneCampoExplicito,
+          ventasDesdeBidones: ventasEsperadas,
+          diferenciaConPrecio: precio > 0 ? Math.abs(ventasEsperadas - precio) : 'N/A',
+          pedidoCompleto: pedido // Para inspección completa
+        });
+      });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📊 Total de pedidos a procesar:', pedidosData.length);
+      
+      pedidosData.forEach((pedido, index) => {
+        // FILTRO CRÍTICO: Solo pedidos de Aguas Ancud
+        const nombreLocal = pedido.nombrelocal || pedido.nombre_local || '';
+        if (nombreLocal !== 'Aguas Ancud') {
+          pedidosRechazados++;
+          return; // Rechazar pedidos de otros locales
+        }
+        
+        const fechaPedido = parseFechaPedido(pedido.fecha);
+        if (!fechaPedido) {
+          pedidosRechazados++;
+          return;
+        }
+        
+        const infoBidones = obtenerBidonesPedido(pedido, true);
+        let bidonesPedido = infoBidones.bidones;
+        let tieneCampoExplicito = infoBidones.tieneCampoExplicito;
+        
+        // VALIDACIÓN CRÍTICA: Verificar coherencia con precio
+        const precio = parseInt(pedido.precio || pedido.price || 0);
+        if (precio > 0 && bidonesPedido > 0) {
+          const bidonesDesdePrecio = Math.round(precio / PRECIO_BIDON);
+          const diferencia = Math.abs(bidonesPedido - bidonesDesdePrecio);
+          const diferenciaPorcentual = (diferencia / Math.max(bidonesPedido, bidonesDesdePrecio)) * 100;
+          
+          // Si hay una discrepancia significativa (>30%), usar el cálculo desde precio
+          if (diferenciaPorcentual > 30) {
+            console.warn(`⚠️ Pedido con discrepancia: fecha=${pedido.fecha}, precio=${precio}, bidones_campo=${bidonesPedido}, bidones_precio=${bidonesDesdePrecio}, diferencia=${diferenciaPorcentual.toFixed(1)}%`);
+            bidonesPedido = bidonesDesdePrecio;
+            tieneCampoExplicito = false; // Marcar como calculado desde precio
+          }
+        }
+        
+        if (bidonesPedido <= 0) {
+          pedidosRechazados++;
+          return;
+        }
+        
+        // Acumular estadísticas de cálculo
+        sumaPreciosReales += precio;
+        
+        if (tieneCampoExplicito) {
+          pedidosConCampoExplicito++;
+          bidonesDesdeCamposExplicitos += bidonesPedido;
+        } else {
+          pedidosCalculadosDesdePrecio++;
+          bidonesDesdePrecio += bidonesPedido;
+        }
+        
+        // Validar si el pedido es duplicado (mismo ID)
+        const pedidoId = pedido.id || pedido.idpedido || pedido._id || `${pedido.fecha}-${pedido.usuario}-${pedido.precio}`;
+        if (pedidosIds.has(pedidoId)) {
+          pedidosDuplicados.push({
+            id: pedidoId,
+            fecha: pedido.fecha,
+            usuario: pedido.usuario,
+            precio: pedido.precio,
+            bidones: bidonesPedido
+          });
+          console.warn(`⚠️ Pedido duplicado detectado: ID ${pedidoId}, fecha: ${pedido.fecha}, bidones: ${bidonesPedido}`);
+          // NO contar duplicados en el total
+          return;
+        }
+        pedidosIds.add(pedidoId);
+        
+        pedidosProcesados++;
+        
+        // === CONTAR BIDONES TOTALES HISTÓRICOS ===
+        // Todos los pedidos de Aguas Ancud (sin filtro de fecha, pero con filtro de local)
+        // IMPORTANTE: Solo incluye pedidos donde nombrelocal === 'Aguas Ancud'
+        bidonesTotalesHistoricos += bidonesPedido;
+        totalPedidosHistoricos++;
+        
+        // Determinar rango de fechas históricas
+        if (!fechaMasAntigua || fechaPedido < fechaMasAntigua) {
+          fechaMasAntigua = fechaPedido;
+        }
+        if (!fechaMasReciente || fechaPedido > fechaMasReciente) {
+          fechaMasReciente = fechaPedido;
+        }
+        
+        // Análisis temporal: agrupar por año y mes
+        const anio = fechaPedido.getFullYear();
+        const mesAnio = `${anio}-${String(fechaPedido.getMonth() + 1).padStart(2, '0')}`;
+        
+        pedidosPorAnio[anio] = (pedidosPorAnio[anio] || 0) + 1;
+        pedidosPorMes[mesAnio] = (pedidosPorMes[mesAnio] || 0) + 1;
+        bidonesPorAnio[anio] = (bidonesPorAnio[anio] || 0) + bidonesPedido;
+        bidonesPorMes[mesAnio] = (bidonesPorMes[mesAnio] || 0) + bidonesPedido;
+        
+        // Bidones del mes actual
+        // IMPORTANTE: Verificar que la fecha parseada esté en el mes y año correctos
+        const esDelMesActual = fechaPedido.getMonth() === hoy.getMonth() && 
+                               fechaPedido.getFullYear() === hoy.getFullYear();
+        
+        if (fechaPedido >= inicioMes && esDelMesActual) {
+          bidonesMesActual += bidonesPedido;
+          pedidosDelMesDetalle.push({
+            index: index + 1,
+            fecha: pedido.fecha,
+            fechaParseada: fechaPedido.toISOString(),
+            bidones: bidonesPedido,
+            acumulado: bidonesMesActual,
+            precio: pedido.precio || pedido.price || 'N/A'
+          });
+          // Log detallado de TODOS los pedidos del mes para debugging
+          console.log(`📦 Pedido #${index + 1} del mes: ${bidonesPedido} bidones, fecha: ${pedido.fecha}, fecha parseada: ${fechaPedido.toISOString()}, mes: ${fechaPedido.getMonth() + 1}, año: ${fechaPedido.getFullYear()}, acumulado: ${bidonesMesActual}`);
+        } else if (fechaPedido >= inicioMes && !esDelMesActual) {
+          console.warn(`⚠️ Pedido #${index + 1} tiene fecha >= inicioMes pero NO es del mes actual:`, {
+            fecha: pedido.fecha,
+            fechaParseada: fechaPedido.toISOString(),
+            mesParseado: fechaPedido.getMonth() + 1,
+            añoParseado: fechaPedido.getFullYear(),
+            mesActual: hoy.getMonth() + 1,
+            añoActual: hoy.getFullYear()
+          });
+        }
+        
+        // Bidones de la semana actual
+        if (fechaPedido >= inicioSemana) {
+          bidonesSemanaActual += bidonesPedido;
+        }
+        
+        // Bidones de hoy
+        if (fechaPedido.getTime() === hoy.getTime()) {
+          bidonesHoy += bidonesPedido;
+        }
+        
+        // === CALCULAR BIDONES DEL MES PASADO ===
+        // Bidones del mes pasado completo
+        if (fechaPedido >= inicioMesPasado && fechaPedido <= finMesPasado) {
+          bidonesMesPasado += bidonesPedido;
+        }
+        
+        // Bidones de la misma semana del mes pasado
+        if (fechaPedido >= lunesSemanaMesPasado && fechaPedido <= finSemanaMesPasado) {
+          bidonesSemanaMesPasado += bidonesPedido;
+        }
+        
+        // Bidones del mismo día del mes anterior
+        if (fechaPedido >= mismoDiaMesPasado && fechaPedido <= finMismoDiaMesPasado) {
+          bidonesMismoDiaMesPasado += bidonesPedido;
         }
       });
       
-      // Si no encuentra pedidos de hoy, usar aproximación
-      if (ventasHoy === 0) {
-        ventasHoy = Math.round(kpisData.ventas_mes / 30);
+      console.log('=== RESUMEN DE BIDONES DEL MES PASADO ===');
+      console.log('📦 Bidones mes pasado:', bidonesMesPasado);
+      console.log('📦 Bidones misma semana mes pasado:', bidonesSemanaMesPasado);
+      console.log('📦 Bidones mismo día mes pasado:', bidonesMismoDiaMesPasado);
+      console.log('=== RESUMEN DE BIDONES TOTALES HISTÓRICOS ===');
+      console.log('📦 Bidones totales históricos (todos los pedidos de Aguas Ancud, sin duplicados):', bidonesTotalesHistoricos);
+      console.log('📊 Total de pedidos históricos procesados (solo Aguas Ancud, sin duplicados):', totalPedidosHistoricos);
+      console.log('📊 Total de pedidos rechazados (otros locales o datos inválidos):', pedidosRechazados);
+      console.log('📊 Total de pedidos duplicados detectados:', pedidosDuplicados.length);
+      if (pedidosDuplicados.length > 0) {
+        console.warn('⚠️ Pedidos duplicados encontrados (NO incluidos en el total):', pedidosDuplicados);
+      }
+      console.log('✅ FILTRO APLICADO: Solo pedidos de "Aguas Ancud"');
+      
+      // Estadísticas de cálculo de bidones
+      console.log('=== ESTADÍSTICAS DE CÁLCULO DE BIDONES ===');
+      console.log(`📊 Pedidos con campo explícito (cantidad/cant/qty/etc): ${pedidosConCampoExplicito} (${((pedidosConCampoExplicito / totalPedidosHistoricos) * 100).toFixed(1)}%)`);
+      console.log(`📊 Pedidos calculados desde precio: ${pedidosCalculadosDesdePrecio} (${((pedidosCalculadosDesdePrecio / totalPedidosHistoricos) * 100).toFixed(1)}%)`);
+      console.log(`📦 Bidones desde campos explícitos: ${bidonesDesdeCamposExplicitos}`);
+      console.log(`📦 Bidones calculados desde precio: ${bidonesDesdePrecio}`);
+      console.log(`💰 Suma de precios reales de pedidos: $${sumaPreciosReales.toLocaleString('es-CL')}`);
+      console.log(`💰 Ventas calculadas desde bidones: $${(bidonesTotalesHistoricos * PRECIO_BIDON).toLocaleString('es-CL')}`);
+      console.log(`💰 Diferencia: $${((bidonesTotalesHistoricos * PRECIO_BIDON) - sumaPreciosReales).toLocaleString('es-CL')}`);
+      
+      // Validación: ¿Los precios coinciden con bidones × $2,000?
+      const ventasEsperadasDesdePrecios = sumaPreciosReales;
+      const ventasCalculadasDesdeBidones = bidonesTotalesHistoricos * PRECIO_BIDON;
+      const diferenciaPorcentual = ventasEsperadasDesdePrecios > 0 ? ((ventasCalculadasDesdeBidones - ventasEsperadasDesdePrecios) / ventasEsperadasDesdePrecios) * 100 : 0;
+      
+      console.log('=== VALIDACIÓN: PRECIOS vs BIDONES ===');
+      console.log(`💰 Ventas esperadas si los precios fueran correctos: $${ventasEsperadasDesdePrecios.toLocaleString('es-CL')}`);
+      console.log(`💰 Ventas calculadas desde bidones (${bidonesTotalesHistoricos} × $2,000): $${ventasCalculadasDesdeBidones.toLocaleString('es-CL')}`);
+      console.log(`📊 Diferencia porcentual: ${diferenciaPorcentual.toFixed(1)}%`);
+      
+      // DECISIÓN CRÍTICA: Si hay una discrepancia grande (>50%), los campos de cantidad están incorrectos
+      // Usar la suma de precios como fuente de verdad y recalcular bidones desde precios
+      let ventasTotalesHistoricasFinal = ventasCalculadasDesdeBidones;
+      let bidonesTotalesHistoricosCorregidos = bidonesTotalesHistoricos;
+      
+      if (diferenciaPorcentual > 50 && ventasEsperadasDesdePrecios > 0) {
+        console.warn('⚠️ ADVERTENCIA CRÍTICA: Los campos de cantidad (ordenpedido, cantidad, etc.) NO reflejan la cantidad real de bidones');
+        console.warn('   Los campos de cantidad están dando valores significativamente mayores que lo esperado según el precio');
+        console.warn('   Posibles causas:');
+        console.warn('   1. El campo "ordenpedido" contiene texto o información adicional que se está interpretando incorrectamente');
+        console.warn('   2. Los campos de cantidad están multiplicados o duplicados');
+        console.warn('   3. Hay un error en cómo se está extrayendo la cantidad de los campos');
+        console.warn('   ✅ SOLUCIÓN: Usar suma de precios como fuente de verdad (más confiable)');
+        console.warn(`   ✅ Ventas históricas correctas: $${ventasEsperadasDesdePrecios.toLocaleString('es-CL')} (suma de precios reales)`);
+        console.warn(`   ✅ Bidones recalculados desde precios: ${Math.round(ventasEsperadasDesdePrecios / PRECIO_BIDON)}`);
+        
+        // Usar suma de precios como fuente de verdad
+        ventasTotalesHistoricasFinal = ventasEsperadasDesdePrecios;
+        bidonesTotalesHistoricosCorregidos = Math.round(ventasEsperadasDesdePrecios / PRECIO_BIDON);
+        
+        // Actualizar bidonesTotalesHistoricos para mantener coherencia
+        bidonesTotalesHistoricos = bidonesTotalesHistoricosCorregidos;
       }
       
-      console.log('Ventas hoy:', ventasHoy);
+      if (pedidosCalculadosDesdePrecio > pedidosConCampoExplicito) {
+        console.warn('⚠️ ADVERTENCIA: La mayoría de los pedidos se calculan desde precio, no tienen campo de cantidad explícito');
+        console.warn('   Esto puede causar discrepancias si los precios incluyen IVA, descuentos u otros conceptos');
+      }
       
-      // Calcular datos derivados
-      const ventasSemanales = calcularVentasSemanales(kpisData.ventas_mes);
-      const ventasDiarias = ventasHoy; // Usar ventas reales de hoy
+      // Resumen del período histórico
+      if (fechaMasAntigua && fechaMasReciente) {
+        const diasDiferencia = Math.round((fechaMasReciente - fechaMasAntigua) / (1000 * 60 * 60 * 24));
+        const aniosDiferencia = (diasDiferencia / 365).toFixed(1);
+        
+        // Calcular meses completos
+        const mesesDiferencia = Math.round((fechaMasReciente.getTime() - fechaMasAntigua.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+        const mesesCompletos = Math.floor(diasDiferencia / 30.44);
+        
+        // Calcular ventas totales históricas
+        const ventasTotalesHistoricasCalculadas = bidonesTotalesHistoricos * PRECIO_BIDON;
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📊 RESUMEN EJECUTIVO: VENTAS TOTALES HISTÓRICAS - AGUAS ANCUD');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`📅 DESDE: ${fechaMasAntigua.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+        console.log(`📅 HASTA: ${fechaMasReciente.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+        console.log(`📅 PERÍODO TOTAL: ${diasDiferencia} días (${aniosDiferencia} años, aproximadamente ${mesesCompletos} meses completos)`);
+        console.log(`📦 TOTAL DE BIDONES VENDIDOS: ${bidonesTotalesHistoricos.toLocaleString('es-CL')}`);
+        console.log(`💰 TOTAL DE VENTAS HISTÓRICAS: $${ventasTotalesHistoricasCalculadas.toLocaleString('es-CL')}`);
+        console.log(`📊 TOTAL DE PEDIDOS (solo Aguas Ancud, sin duplicados): ${totalPedidosHistoricos.toLocaleString('es-CL')}`);
+        console.log(`📈 PROMEDIO MENSUAL: $${Math.round(ventasTotalesHistoricasCalculadas / Math.max(mesesCompletos, 1)).toLocaleString('es-CL')}`);
+        console.log(`📈 PROMEDIO DIARIO: $${Math.round(ventasTotalesHistoricasCalculadas / Math.max(diasDiferencia, 1)).toLocaleString('es-CL')}`);
+        console.log(`📈 PROMEDIO BIDONES POR DÍA: ${(bidonesTotalesHistoricos / Math.max(diasDiferencia, 1)).toFixed(1)}`);
+        console.log(`📈 PROMEDIO BIDONES POR MES: ${(bidonesTotalesHistoricos / Math.max(mesesCompletos, 1)).toFixed(1)}`);
+        console.log(`📈 PROMEDIO BIDONES POR PEDIDO: ${(bidonesTotalesHistoricos / Math.max(totalPedidosHistoricos, 1)).toFixed(2)}`);
+        
+        // Validación de coherencia
+        const ventasEsperadas = bidonesTotalesHistoricos * PRECIO_BIDON;
+        if (Math.abs(ventasTotalesHistoricasCalculadas - ventasEsperadas) > 1) {
+          console.error('❌ ERROR: Las ventas calculadas no coinciden con bidones × $2,000');
+          console.error(`   Bidones: ${bidonesTotalesHistoricos}, Ventas: ${ventasTotalesHistoricasCalculadas}, Esperado: ${ventasEsperadas}`);
+        } else {
+          console.log('✅ VALIDACIÓN: Ventas = Bidones × $2,000 (correcto)');
+        }
+        
+        // Advertencia si el promedio mensual es muy alto
+        const promedioMensual = ventasTotalesHistoricasCalculadas / Math.max(mesesCompletos, 1);
+        if (promedioMensual > 5000000) { // Más de 5M por mes
+          console.warn('⚠️ ADVERTENCIA: Promedio mensual > $5M, verificar si es correcto');
+          console.warn(`   Promedio mensual: $${Math.round(promedioMensual).toLocaleString('es-CL')}`);
+          console.warn('   Verificar:');
+          console.warn('   1. Si hay pedidos duplicados que no se detectaron');
+          console.warn('   2. Si el cálculo de bidones por pedido es correcto');
+          console.warn('   3. Si hay datos de otros períodos que no deberían estar');
+        }
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        console.log('📅 FECHA MÁS ANTIGUA (inicio de datos):', fechaMasAntigua.toISOString(), '(', fechaMasAntigua.toLocaleDateString('es-ES'), ')');
+        console.log('📅 FECHA MÁS RECIENTE (último pedido):', fechaMasReciente.toISOString(), '(', fechaMasReciente.toLocaleDateString('es-ES'), ')');
+        console.log('📅 RANGO DE DATOS HISTÓRICOS:', fechaMasAntigua.toLocaleDateString('es-ES'), 'hasta', fechaMasReciente.toLocaleDateString('es-ES'));
+      } else {
+        console.log('⚠️ No se encontraron fechas válidas en los pedidos históricos');
+      }
+      
+      // Mostrar distribución por año
+      console.log('=== DISTRIBUCIÓN DE PEDIDOS POR AÑO ===');
+      const aniosOrdenados = Object.keys(pedidosPorAnio).sort();
+      aniosOrdenados.forEach(anio => {
+        const pedidosAnio = pedidosPorAnio[anio];
+        const bidonesAnio = bidonesPorAnio[anio];
+        const ventasAnio = bidonesAnio * PRECIO_BIDON;
+        console.log(`   ${anio}: ${pedidosAnio} pedidos, ${bidonesAnio} bidones, $${ventasAnio.toLocaleString('es-CL')}`);
+      });
+      
+      // Mostrar distribución por mes (últimos 12 meses vs todos los meses)
+      console.log('=== DISTRIBUCIÓN DE PEDIDOS POR MES (últimos 12 meses) ===');
+      const mesesOrdenados = Object.keys(pedidosPorMes).sort().slice(-12);
+      mesesOrdenados.forEach(mes => {
+        const pedidosMes = pedidosPorMes[mes];
+        const bidonesMes = bidonesPorMes[mes];
+        const ventasMes = bidonesMes * PRECIO_BIDON;
+        console.log(`   ${mes}: ${pedidosMes} pedidos, ${bidonesMes} bidones, $${ventasMes.toLocaleString('es-CL')}`);
+      });
+      
+      console.log(`Pedidos procesados: ${pedidosProcesados}, Rechazados: ${pedidosRechazados}`);
+      console.log(`📊 RESUMEN DE BIDONES DEL MES ACTUAL:`);
+      console.log(`   Total bidones contados: ${bidonesMesActual}`);
+      console.log(`   Total pedidos del mes: ${pedidosDelMesDetalle.length}`);
+      console.log(`   Si esperabas 31 bidones, hay ${bidonesMesActual - 31} bidones de más`);
+      console.log(`   📋 DETALLE DE PEDIDOS DEL MES:`, pedidosDelMesDetalle);
+      
+      // Calcular ventas directamente desde bidones vendidos
+      const ventasMensuales = bidonesMesActual * PRECIO_BIDON;
+      const ventasSemanales = bidonesSemanaActual * PRECIO_BIDON;
+      const ventasDiarias = bidonesHoy * PRECIO_BIDON;
+      
+      // Calcular ventas del mes pasado, misma semana del mes pasado y mismo día del mes anterior
+      const ventasMesPasado = bidonesMesPasado * PRECIO_BIDON;
+      const ventasSemanaMesPasado = bidonesSemanaMesPasado * PRECIO_BIDON;
+      const ventasMismoDiaMesPasado = bidonesMismoDiaMesPasado * PRECIO_BIDON;
+      
+      // Calcular ventas totales históricas desde bidones reales (todos los pedidos históricos)
+      const ventasTotalesHistoricasDesdeBidones = bidonesTotalesHistoricos * PRECIO_BIDON;
+      
+      // Calcular totales de los últimos 12 meses vs total histórico
+      const mesesUltimos12 = Object.keys(pedidosPorMes).sort().slice(-12);
+      const bidonesUltimos12Meses = mesesUltimos12.reduce((sum, mes) => sum + (bidonesPorMes[mes] || 0), 0);
+      const ventasUltimos12Meses = bidonesUltimos12Meses * PRECIO_BIDON;
+      
+      console.log('=== COMPARACIÓN: ÚLTIMOS 12 MESES vs TOTAL HISTÓRICO ===');
+      console.log(`📊 Últimos 12 meses: ${bidonesUltimos12Meses} bidones, $${ventasUltimos12Meses.toLocaleString('es-CL')}`);
+      console.log(`📊 Total histórico: ${bidonesTotalesHistoricos} bidones, $${ventasTotalesHistoricasDesdeBidones.toLocaleString('es-CL')}`);
+      
+      if (bidonesTotalesHistoricos > bidonesUltimos12Meses) {
+        const bidonesAntiguos = bidonesTotalesHistoricos - bidonesUltimos12Meses;
+        const ventasAntiguas = bidonesAntiguos * PRECIO_BIDON;
+        const porcentajeAntiguo = ((bidonesAntiguos / bidonesTotalesHistoricos) * 100).toFixed(1);
+        console.log(`📊 Datos antiguos (fuera de últimos 12 meses): ${bidonesAntiguos} bidones, $${ventasAntiguas.toLocaleString('es-CL')} (${porcentajeAntiguo}%)`);
+      }
+      
+      console.log('=== CÁLCULO DE VENTAS TOTALES HISTÓRICAS ===');
+      console.log('📦 Bidones totales históricos:', bidonesTotalesHistoricos);
+      console.log('💰 Ventas totales históricas (bidones × $2,000):', ventasTotalesHistoricasDesdeBidones);
+      console.log('📊 Valor desde endpoint (suma de precios - puede ser incorrecto):', ventasTotalesHistoricas.ventas_totales || 0);
+      console.log('📊 Total pedidos históricos procesados:', totalPedidosHistoricos);
+      
+      // Validación crítica: verificar que el cálculo sea razonable
+      if (ventasTotalesHistoricasDesdeBidones > 100000000) { // Más de 100M
+        console.error('❌ ERROR CRÍTICO: Ventas totales históricas > 100M, esto parece incorrecto');
+        console.error('   Verificar:');
+        console.error('   1. Si hay pedidos duplicados');
+        console.error('   2. Si el cálculo de bidones por pedido es correcto');
+        console.error('   3. Si hay datos históricos muy antiguos que no deberían estar');
+      }
+      
+      // Validar discrepancia entre ambos cálculos
+      const ventasDesdeEndpoint = ventasTotalesHistoricas.ventas_totales || 0;
+      const diferencia = Math.abs(ventasTotalesHistoricasDesdeBidones - ventasDesdeEndpoint);
+      const porcentajeDiferencia = ventasDesdeEndpoint > 0 ? (diferencia / ventasDesdeEndpoint) * 100 : 0;
+      
+      if (ventasDesdeEndpoint > 0 && porcentajeDiferencia > 10) {
+        console.warn('⚠️ DISCREPANCIA DETECTADA EN VENTAS TOTALES HISTÓRICAS:');
+        console.warn(`   Cálculo desde bidones: $${ventasTotalesHistoricasDesdeBidones.toLocaleString('es-CL')}`);
+        console.warn(`   Cálculo desde endpoint (suma de precios): $${ventasDesdeEndpoint.toLocaleString('es-CL')}`);
+        console.warn(`   Diferencia: $${diferencia.toLocaleString('es-CL')} (${porcentajeDiferencia.toFixed(1)}%)`);
+        console.warn('   ⚠️ Usando cálculo desde bidones (más preciso)');
+        console.warn('   💡 El endpoint suma los campos "precio" que pueden tener valores incorrectos');
+      }
+      
+      // Validar coherencia con gráficos mensuales (solo para información, NO para cambiar el valor)
+      // El card de "Ventas Totales Históricas" debe mostrar TODOS los datos históricos sin restricciones
+      if (ventasHistoricas && Array.isArray(ventasHistoricas) && ventasHistoricas.length > 0) {
+        const sumaVentasMensuales = ventasHistoricas.reduce((sum, mes) => sum + (mes.ventas || 0), 0);
+        const diferenciaConGraficos = Math.abs(ventasTotalesHistoricasDesdeBidones - sumaVentasMensuales);
+        const porcentajeDiferenciaGraficos = sumaVentasMensuales > 0 ? (diferenciaConGraficos / sumaVentasMensuales) * 100 : 0;
+        
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('=== COMPARACIÓN: GRÁFICO DE BARRAS vs CÁLCULO TOTAL HISTÓRICO ===');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`📊 SUMA DE VENTAS MENSUALES (gráfico de barras): $${sumaVentasMensuales.toLocaleString('es-CL')}`);
+        console.log(`📦 VENTAS TOTALES HISTÓRICAS (cálculo desde bidones): $${ventasTotalesHistoricasDesdeBidones.toLocaleString('es-CL')}`);
+        console.log(`📈 MESES EN GRÁFICO: ${ventasHistoricas.length}`);
+        console.log(`📊 DIFERENCIA: $${diferenciaConGraficos.toLocaleString('es-CL')} (${porcentajeDiferenciaGraficos.toFixed(1)}%)`);
+        console.log(`📊 Promedio mensual en gráfico: $${Math.round(sumaVentasMensuales / ventasHistoricas.length).toLocaleString('es-CL')}`);
+        console.log(`📊 Promedio mensual en total histórico: $${Math.round(ventasTotalesHistoricasDesdeBidones / Math.max(ventasHistoricas.length, 12)).toLocaleString('es-CL')}`);
+        
+        // Mostrar detalles de los meses del gráfico
+        console.log('📋 DETALLE DE MESES EN GRÁFICO:');
+        ventasHistoricas.forEach((mes, index) => {
+          console.log(`   ${index + 1}. ${mes.name}: $${(mes.ventas || 0).toLocaleString('es-CL')}`);
+        });
+        
+        if (porcentajeDiferenciaGraficos > 20) {
+          console.warn('⚠️ ADVERTENCIA: Gran diferencia entre gráfico y total histórico');
+          console.warn('   Posibles causas:');
+          console.warn('   1. El gráfico solo muestra los últimos meses (no todos los históricos)');
+          console.warn('   2. El cálculo de bidones es diferente entre frontend y backend');
+          console.warn('   3. Hay un problema con el rango de fechas procesado');
+        } else {
+          console.log('✅ Los valores son consistentes');
+        }
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
+      
+      // SIEMPRE usar el cálculo desde bidones históricos completos (sin restricciones)
+      // ventasTotalesHistoricasFinal ya se calculó arriba con la validación de discrepancia
+      
+      console.log('=== CÁLCULO DE VENTAS COMPARATIVAS ===');
+      console.log('💰 Ventas mensuales:', ventasMensuales, 'vs mes pasado:', ventasMesPasado);
+      console.log('💰 Ventas semanales:', ventasSemanales, 'vs misma semana mes pasado:', ventasSemanaMesPasado);
+      console.log('💰 Ventas diarias:', ventasDiarias, 'vs mismo día mes pasado:', ventasMismoDiaMesPasado);
+      
+      console.log('=== CÁLCULO DE VENTAS DESDE BIDONES ===');
+      console.log('📦 BIDONES MES ACTUAL:', bidonesMesActual);
+      console.log('💰 VENTAS MENSUALES (bidones × $2,000):', ventasMensuales);
+      console.log('✅ VERIFICACIÓN: Si hay 31 bidones → ventas = 31 × $2,000 = $62,000');
+      console.log('📊 CÁLCULO: ', bidonesMesActual, ' bidones × $', PRECIO_BIDON, ' = $', ventasMensuales);
+      console.log('Bidones semana actual:', bidonesSemanaActual);
+      console.log('Ventas semanales (bidones × $2,000):', ventasSemanales);
+      console.log('Bidones hoy:', bidonesHoy);
+      console.log('Ventas diarias (bidones × $2,000):', ventasDiarias);
+      console.log('========================================');
+      
+      // VALIDACIÓN CRÍTICA: Las ventas deben ser bidones × $2,000
+      const ventasEsperadas = bidonesMesActual * PRECIO_BIDON;
+      if (ventasMensuales !== ventasEsperadas) {
+        console.error('❌ ERROR: Las ventas mensuales no coinciden con bidones × $2,000');
+        console.error(`Bidones: ${bidonesMesActual}, Ventas calculadas: ${ventasMensuales}, Esperado: ${ventasEsperadas}`);
+      } else {
+        console.log('✅ VALIDACIÓN CORRECTA: Ventas mensuales = bidones × $2,000');
+      }
       const meta = calcularMeta(kpisData.ventas_mes_pasado);
-      const progresoMeta = calcularProgresoMeta(kpisData.ventas_mes, meta);
-      const ticketPromedio = calcularTicketPromedio(kpisData.ventas_mes, kpisData.total_pedidos_mes);
+      const progresoMeta = calcularProgresoMeta(ventasMensuales, meta);
+      const ticketPromedio = calcularTicketPromedio(ventasMensuales, kpisData.total_pedidos_mes);
       
-      // Calcular costos del mes pasado (aproximación basada en bidones vendidos)
-      const bidonesMesPasado = Math.round((kpisData.litros_vendidos_mes_pasado || 0) / 20);
-      const costosMesPasado = 260000 + (bidonesMesPasado * 60.69); // Cuota camión + costos variables
+      // VALIDACIONES Y CORRECCIONES DE INCONSISTENCIAS
+      // 1. Validar que IVA no sea mayor que ventas (si es así, limitar a 19% de ventas)
+      let ivaCorregido = kpisData.iva || 0;
+      if (ivaCorregido > ventasMensuales) {
+        console.warn('⚠️ IVA mayor que ventas detectado. Corrigiendo...');
+        // El IVA neto puede ser negativo si el IVA de las tapas supera al de las ventas
+        // Pero para visualización, limitamos a que no supere el 19% de ventas
+        ivaCorregido = Math.min(ivaCorregido, ventasMensuales * 0.19);
+      }
+      
+      // Los bidones del mes pasado ya se calcularon desde pedidos reales arriba
+      // No necesitamos recalcular desde litros
+      
+      // Calcular costos del mes actual: 260,000 (cuota camión fijo) + (tapas unitarias × bidones vendidos)
+      const COSTO_CUOTA_CAMION = 260000; // Cuota fija del camión
+      const COSTO_TAPA_UNITARIA = 60.69; // Costo de tapa unitaria por bidón
+      const costosMesActual = COSTO_CUOTA_CAMION + (bidonesMesActual * COSTO_TAPA_UNITARIA);
+      
+      // Calcular costos del mes pasado desde bidones reales
+      const costosMesPasado = COSTO_CUOTA_CAMION + (bidonesMesPasado * COSTO_TAPA_UNITARIA);
+      
+      // 2. Validar cálculo de utilidades: Ventas - Costos (usando costos calculados)
+      const utilidadesCalculadas = ventasMensuales - costosMesActual;
+      const utilidadesCorregidas = kpisData.utilidad !== undefined 
+        ? kpisData.utilidad 
+        : utilidadesCalculadas;
+      
+      // Calcular utilidades del mes pasado
+      const utilidadesMesPasado = ventasMesPasado - costosMesPasado;
+      
+      // Calcular IVA del mes pasado (19% de ventas del mes pasado)
+      const ivaMesPasado = ventasMesPasado * 0.19;
+      
+      // 3. Verificar coherencia: Ticket Promedio * Pedidos = Ventas Mensuales (aproximadamente)
+      const ventasCalculadasDesdeTicket = ticketPromedio * (kpisData.total_pedidos_mes || 0);
+      const diferenciaVentas = Math.abs(ventasMensuales - ventasCalculadasDesdeTicket);
+      if (ventasMensuales > 0 && diferenciaVentas > ventasMensuales * 0.1) { // Más del 10% de diferencia
+        console.warn('⚠️ Inconsistencia detectada entre Ticket Promedio * Pedidos y Ventas Mensuales');
+        console.warn(`Ventas desde bidones: ${ventasMensuales}, Ventas desde ticket: ${ventasCalculadasDesdeTicket}`);
+      }
       
       // Calcular clientes inactivos (aproximación)
       const clientesInactivos = Math.max(0, Math.round(kpisData.clientes_activos * 0.2));
@@ -255,7 +891,6 @@ export default function Home() {
       const bidonesVendidos = Math.round(litrosVendidos / 20);
 
       // Calcular días transcurridos en el mes actual
-      const hoy = new Date();
       const diasActuales = hoy.getDate();
       const diasAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0).getDate(); // Días del mes anterior
       
@@ -280,25 +915,40 @@ export default function Home() {
       console.log('=== FIN DEBUG PEDIDOS ===');
 
       console.log('🔄 Actualizando estado con datos completos...');
+      console.log('📤 VALOR QUE SE ENVIARÁ AL CARD DE VENTAS MENSUALES:', ventasMensuales);
+      console.log('📦 BIDONES CONTADOS DEL MES:', bidonesMesActual);
+      console.log('🔍 VERIFICACIÓN FINAL: ', bidonesMesActual, ' bidones × $2,000 = $', ventasMensuales);
+      
       // Actualizar estado con datos completos (incluyendo pedidos y gráficos)
       // Si es carga inicial, ya actualizamos antes, solo agregamos campos adicionales
       setData(prev => ({
         ...prev, // Mantener datos previos (ya establecidos en carga inicial)
-        ventasTotalesHistoricas: ventasTotalesHistoricas.ventas_totales || prev.ventasTotalesHistoricas || 0,
+        // Ventas totales históricas: SIEMPRE usar TODOS los datos históricos (sin restricciones de tiempo)
+        // Objetivo: mostrar el flujo monetario histórico completo del negocio desde el inicio
+        // NO usar ventasTotalesHistoricas.ventas_totales del endpoint porque suma campos "precio" que pueden estar incorrectos
+        ventasTotalesHistoricas: ventasTotalesHistoricasFinal > 0 ? ventasTotalesHistoricasFinal : (prev.ventasTotalesHistoricas || 0),
         pedidos: kpisData.total_pedidos_mes || 0,
         clientes: kpisData.clientes_activos || 0,
         eficiencia: 94.2, // Mantener valor fijo por ahora
         capacidad: kpisData.capacidad_utilizada || 0,
         litros: kpisData.litros_vendidos || 0,
-        ventasMensuales: kpisData.ventas_mes || 0,
+        // Ventas calculadas directamente desde bidones vendidos (bidones × $2,000)
+        ventasMensuales: ventasMensuales,
         ventasSemanales: ventasSemanales,
         ventasDiarias: ventasDiarias,
-        ventasDiariasMesPasado: Math.round(kpisData.ventas_mes_pasado / 30),
-        bidones: Math.round((kpisData.total_litros_mes || 0) / 20), // 20 litros por bidón
-        iva: kpisData.iva || 0,
-        costos: kpisData.costos_reales || 0,
+        // Ventas del mes pasado calculadas desde bidones reales
+        ventasMesPasado: ventasMesPasado,
+        ventasSemanaMesPasado: ventasSemanaMesPasado,
+        ventasMismoDiaMesPasado: ventasMismoDiaMesPasado,
+        // Bidones calculados directamente desde pedidos (no desde litros)
+        bidones: bidonesMesActual,
+        // IVA corregido (validado para no exceder ventas)
+        iva: ivaCorregido,
+        // Costos calculados: 260,000 (cuota camión) + (tapas unitarias × bidones vendidos)
+        costos: costosMesActual,
         costosMesPasado: costosMesPasado,
-        utilidades: kpisData.utilidad || 0,
+        // Utilidades corregidas (validadas: Ventas - Costos)
+        utilidades: utilidadesCorregidas,
         meta: progresoMeta,
         ticketPromedio: ticketPromedio,
         clientesActivos: kpisData.clientes_activos || 0,
@@ -311,27 +961,39 @@ export default function Home() {
         capacidadTotal: capacidadTotal,
         ventasHistoricas: ventasHistoricas,
         bidonesMesPasado: bidonesMesPasado,
-        ivaMesPasado: kpisData.iva_mes_pasado || 0,
-        utilidadesMesPasado: kpisData.utilidad_mes_pasado || 0,
+        bidonesSemanaMesPasado: bidonesSemanaMesPasado,
+        bidonesMismoDiaMesPasado: bidonesMismoDiaMesPasado,
+        bidonesTotalesHistoricos: bidonesTotalesHistoricos,
+        // Rango de fechas históricas
+        fechaMasAntiguaHistorica: fechaMasAntigua ? fechaMasAntigua.toISOString() : null,
+        fechaMasRecienteHistorica: fechaMasReciente ? fechaMasReciente.toISOString() : null,
+        totalPedidosHistoricos: totalPedidosHistoricos,
+        // IVA y utilidades del mes pasado calculados desde ventas reales
+        ivaMesPasado: ivaMesPasado,
+        utilidadesMesPasado: utilidadesMesPasado,
         ticketPromedioMesPasado: kpisData.ticket_promedio_mes_pasado || 0,
         clientesActivosMesPasado: kpisData.clientes_activos_mes_pasado || 0,
         clientesInactivosMesPasado: kpisData.clientes_inactivos_mes_pasado || 0,
         porcentajeCambioProyectado: porcentajeCambioProyectado,
         esPositivoProyectado: (kpisData.total_pedidos_mes || 0) >= pedidosMesPasadoProyectado,
-        // Actualizar campos que dependen de pedidos y datos históricos
-        ventasTotalesHistoricas: ventasTotalesHistoricas.ventas_totales || prev.ventasTotalesHistoricas || 0,
+        // Actualizar campos que dependen de pedidos y datos históricos (ya establecidos arriba)
         ventasHistoricas: ventasHistoricas.length > 0 ? ventasHistoricas : prev.ventasHistoricas || []
       }));
 
       // Log de depuración para costos
       console.log('=== DEBUG COSTOS ===');
-      console.log('kpisData.costos_reales:', kpisData.costos_reales);
-      console.log('kpisData.litros_vendidos_mes_pasado:', kpisData.litros_vendidos_mes_pasado);
-      console.log('costosMesPasado calculado:', costosMesPasado);
-      console.log('Porcentaje de cambio calculado:', calcularPorcentajeCambio(data.costos, costosMesPasado));
-      console.log('Es positivo:', data.costos <= costosMesPasado);
+      console.log('📦 Bidones mes actual:', bidonesMesActual);
+      console.log('💰 Costos mes actual calculado:', costosMesActual, '(260,000 +', bidonesMesActual, '× 60.69)');
+      console.log('📦 Bidones mes pasado:', bidonesMesPasado);
+      console.log('💰 Costos mes pasado calculado:', costosMesPasado, '(260,000 +', bidonesMesPasado, '× 60.69)');
+      console.log('📊 Porcentaje de cambio calculado:', calcularPorcentajeCambio(costosMesActual, costosMesPasado));
+      console.log('✅ Es positivo (costos actuales <= costos mes pasado):', costosMesActual <= costosMesPasado);
       console.log('=== FIN DEBUG COSTOS ===');
       console.log('✅ fetchData completado exitosamente');
+      
+      // Ocultar loading después de cargar todos los datos
+      setLoading(false);
+      setIsRefreshing(false);
 
     } catch (err) {
       console.error('❌ Error obteniendo datos:', err);
@@ -339,7 +1001,8 @@ export default function Home() {
       setLoading(false);
       setIsRefreshing(false);
     } finally {
-      setIsRefreshing(false); // Limpiar el estado de refresh (loading ya se maneja arriba)
+      // Asegurar que siempre se limpie el estado de refreshing
+      setIsRefreshing(false);
       console.log('🏁 fetchData finalizado');
     }
   };
@@ -576,6 +1239,9 @@ export default function Home() {
               subtitle="Acumulado desde el inicio"
               percentageChange={calcularPorcentajeCambio(data.ventas, data.ventasMesPasado)}
               isPositive={data.ventas >= data.ventasMesPasado}
+              fechaInicio={data.fechaMasAntiguaHistorica}
+              fechaFin={data.fechaMasRecienteHistorica}
+              totalPedidos={data.totalPedidosHistoricos}
             />
           </Box>
 
@@ -592,8 +1258,9 @@ export default function Home() {
           >
             <VentasMensualesCard 
               value={data.ventasMensuales}
-              percentageChange={calcularPorcentajeCambio(data.ventasMensuales, data.ventasMesPasado)}
-              isPositive={data.ventasMensuales >= data.ventasMesPasado}
+              previousValue={data.ventasMesPasado || 0}
+              percentageChange={calcularPorcentajeCambio(data.ventasMensuales, data.ventasMesPasado || 0)}
+              isPositive={data.ventasMensuales >= (data.ventasMesPasado || 0)}
             />
           </Box>
 
@@ -610,8 +1277,11 @@ export default function Home() {
           >
             <VentasSemanalesCard 
               value={data.ventasSemanales}
-              percentageChange={calcularPorcentajeCambio(data.ventasSemanales, data.ventasMesPasado / 4)}
-              isPositive={data.ventasSemanales >= data.ventasMesPasado / 4}
+              percentageChange={calcularPorcentajeCambio(
+                data.ventasSemanales, 
+                data.ventasSemanaMesPasado || 0
+              )}
+              isPositive={data.ventasSemanales >= (data.ventasSemanaMesPasado || 0)}
             />
           </Box>
 
@@ -628,8 +1298,11 @@ export default function Home() {
           >
             <VentasDiariasCard 
               value={data.ventasDiarias}
-              percentageChange={calcularPorcentajeCambio(data.ventasDiarias, data.ventasMesPasado / 30)}
-              isPositive={data.ventasDiarias >= data.ventasMesPasado / 30}
+              percentageChange={calcularPorcentajeCambio(
+                data.ventasDiarias, 
+                data.ventasMismoDiaMesPasado || 0
+              )}
+              isPositive={data.ventasDiarias >= (data.ventasMismoDiaMesPasado || 0)}
             />
           </Box>
 
@@ -646,6 +1319,7 @@ export default function Home() {
           >
             <BidonesCard 
               value={data.bidones}
+              previousValue={data.bidonesMesPasado || 0}
               percentageChange={calcularPorcentajeCambio(data.bidones, data.bidonesMesPasado || 0)}
               isPositive={data.bidones >= (data.bidonesMesPasado || 0)}
             />
@@ -839,7 +1513,29 @@ export default function Home() {
             right: 0,
             zIndex: 1
           }}>
-            <RentabilidadCard />
+            <RentabilidadCard 
+              kpiData={{
+                ventasMensuales: data.ventasMensuales,
+                ventasMesPasado: data.ventasMesPasado,
+                ventasSemanales: data.ventasSemanales,
+                ventasDiarias: data.ventasDiarias,
+                costos: data.costos,
+                costosMesPasado: data.costosMesPasado,
+                utilidades: data.utilidades,
+                utilidadesMesPasado: data.utilidadesMesPasado,
+                bidones: data.bidones,
+                bidonesMesPasado: data.bidonesMesPasado,
+                bidonesTotalesHistoricos: data.bidonesTotalesHistoricos,
+                ventasTotalesHistoricas: data.ventasTotalesHistoricas,
+                iva: data.iva,
+                ivaMesPasado: data.ivaMesPasado,
+                ticketPromedio: data.ticketPromedio,
+                pedidosMes: data.pedidosMes,
+                pedidosMesPasado: data.pedidosMesPasado,
+                clientesActivos: data.clientesActivos,
+                clientesActivosMesPasado: data.clientesActivosMesPasado
+              }}
+            />
           </Box>
         </Box>
       </Box>

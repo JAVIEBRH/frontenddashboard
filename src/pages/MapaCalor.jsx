@@ -150,11 +150,11 @@ export default function MapaCalor() {
   useEffect(() => {
     fetchHeatmapData();
     
-    // Actualización automática cada 10 minutos
+    // Actualización automática cada 5 minutos para mantener datos actualizados
     const interval = setInterval(() => {
-      console.log('Actualización automática del mapa de calor...');
+      console.log('⏰ Actualización automática del mapa de calor...', new Date().toLocaleTimeString());
       fetchHeatmapData();
-    }, 10 * 60 * 1000); // 10 minutos
+    }, 5 * 60 * 1000); // 5 minutos (estandarizado con Home)
 
     // Escuchar evento de actualización global
     const handleGlobalRefresh = () => {

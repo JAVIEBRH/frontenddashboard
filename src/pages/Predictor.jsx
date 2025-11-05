@@ -114,15 +114,28 @@ export default function Predictor() {
     cargarHistorialLocal();
     cargarTrackingData();
     
-    // Actualización automática cada 10 minutos
+    // Actualización automática cada 5 minutos para mantener datos actualizados
     const interval = setInterval(() => {
-      console.log('Actualización automática del predictor...');
+      console.log('⏰ Actualización automática del predictor...', new Date().toLocaleTimeString());
       cargarFactoresReales();
       cargarDatosHistoricos();
       cargarTrackingData();
-    }, 10 * 60 * 1000); // 10 minutos
+    }, 5 * 60 * 1000); // 5 minutos (estandarizado con Home)
 
-    return () => clearInterval(interval);
+    // Escuchar evento de actualización global
+    const handleGlobalRefresh = () => {
+      console.log('🌍 Actualización global detectada en Predictor...');
+      cargarFactoresReales();
+      cargarDatosHistoricos();
+      cargarTrackingData();
+    };
+
+    window.addEventListener('globalRefresh', handleGlobalRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('globalRefresh', handleGlobalRefresh);
+    };
   }, []);
 
   const cargarTrackingData = async () => {

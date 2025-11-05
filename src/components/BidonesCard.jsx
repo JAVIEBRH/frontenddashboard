@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getPedidos } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
+import InsightTooltip from './InsightTooltip';
 
 const BidonesCard = ({ 
   title = 'Bidones Vendidos', 
   value = 0, 
+  previousValue = 0,
   subtitle = 'Este mes',
   percentageChange = 0,
   isPositive = true 
@@ -28,95 +29,15 @@ const BidonesCard = ({
       ...prev,
       total_bidones: value,
       bidones_mes_actual: value,
+      bidones_mes_anterior: previousValue, // Usar el prop directamente
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
-  }, [value, percentageChange, isPositive]);
+  }, [value, previousValue, percentageChange, isPositive]);
   
-  const fetchBidonesData = async () => {
-    try {
-      setLoading(true);
-      const pedidos = await getPedidos();
-      
-      // Calcular bidones del mes actual
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Función para calcular bidones basándose en el precio
-      const calcularBidones = (precio) => {
-        const precioNum = parseInt(precio) || 0;
-        // Asumiendo que cada bidón cuesta aproximadamente $4000
-        return Math.max(1, Math.floor(precioNum / 4000));
-      };
-      
-      // Función para parsear fecha
-      const parsearFecha = (fechaStr) => {
-        const partes = fechaStr.split('-');
-        if (partes.length === 3) {
-          return new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
-        }
-        return null;
-      };
-      
-      const bidonesMesActual = pedidos.filter(pedido => {
-        const fechaPedido = parsearFecha(pedido.fecha);
-        return fechaPedido && fechaPedido.getMonth() === mesActual && fechaPedido.getFullYear() === anioActual;
-      }).reduce((total, pedido) => total + calcularBidones(pedido.precio), 0);
-      
-      const bidonesMesAnterior = pedidos.filter(pedido => {
-        const fechaPedido = parsearFecha(pedido.fecha);
-        const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-        const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-        return fechaPedido && fechaPedido.getMonth() === mesAnterior && fechaPedido.getFullYear() === anioAnterior;
-      }).reduce((total, pedido) => total + calcularBidones(pedido.precio), 0);
-      
-      const porcentajeCambio = bidonesMesAnterior > 0 
-        ? ((bidonesMesActual - bidonesMesAnterior) / bidonesMesAnterior) * 100 
-        : 0;
-      
-      // Generar tendencia diaria del mes actual
-      const tendenciaDiaria = [];
-      const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
-      
-      for (let dia = 1; dia <= Math.min(diasEnMes, hoy.getDate()); dia++) {
-        const bidonesDia = pedidos.filter(pedido => {
-          const fechaPedido = parsearFecha(pedido.fecha);
-          return fechaPedido && fechaPedido.getDate() === dia && 
-                 fechaPedido.getMonth() === mesActual && 
-                 fechaPedido.getFullYear() === anioActual;
-        }).reduce((total, pedido) => total + calcularBidones(pedido.precio), 0);
-        
-        tendenciaDiaria.push({
-          dia: dia,
-          bidones: bidonesDia
-        });
-      }
-      
-      setBidonesData({
-        total_bidones: bidonesMesActual,
-        bidones_mes_actual: bidonesMesActual,
-        bidones_mes_anterior: bidonesMesAnterior,
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio >= 0,
-        tendencia_diaria: tendenciaDiaria,
-        fecha_analisis: hoy.toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo datos de bidones:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBidonesData();
-    
-    // Actualizar cada 10 minutos
-    const interval = setInterval(fetchBidonesData, 10 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  // NO hacer cálculo propio - usar SOLO el prop value que viene de Home.jsx
+  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
+  // Este componente solo debe mostrar el valor recibido
 
   // Generar puntos del gráfico de tendencia diaria
   const generarPuntosGrafico = () => {
@@ -134,10 +55,15 @@ const BidonesCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Bidones vendidos:
-Mes actual: ${bidonesData.bidones_mes_actual.toLocaleString('es-CL')}
-Mes anterior: ${bidonesData.bidones_mes_anterior.toLocaleString('es-CL')}
-Cambio: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toFixed(1)}%`;
+  const tooltipContent = `📦 BIDONES VENDIDOS
+
+🔢 Mes actual: ${bidonesData.bidones_mes_actual.toLocaleString('es-CL')} bidones
+📅 Mes anterior: ${bidonesData.bidones_mes_anterior.toLocaleString('es-CL')} bidones
+
+${bidonesData.es_positivo ? '📈' : '📉'} Variación: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Contado directamente desde pedidos reales
+   Cada bidón = 20 litros`;
 
   return (
     <Box
@@ -166,7 +92,6 @@ Cambio: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toF
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchBidonesData}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -204,7 +129,11 @@ Cambio: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toF
               fontDisplay: 'swap'
             }}
           >
-            {bidonesData.total_bidones.toLocaleString('es-CL')}
+            {(() => {
+              const valorMostrado = bidonesData.total_bidones.toLocaleString('es-CL');
+              console.log('📊 BidonesCard MOSTRANDO en pantalla:', valorMostrado, '(valor numérico:', bidonesData.total_bidones, ', prop value recibido:', value, ')');
+              return valorMostrado;
+            })()}
           </Typography>
           <Typography 
             variant="body2" 
@@ -222,10 +151,9 @@ Cambio: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toF
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
           <Chip
             label={`${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toFixed(1)}%`}
@@ -252,7 +180,7 @@ Cambio: ${bidonesData.es_positivo ? '+' : ''}${bidonesData.porcentaje_cambio.toF
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia diaria */}

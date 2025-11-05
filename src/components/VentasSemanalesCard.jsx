@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip, Tooltip } from '@mui/material';
-import { getVentasHistoricas } from '../services/api';
+import { Box, Typography, Chip } from '@mui/material';
+import InsightTooltip from './InsightTooltip';
 
 const VentasSemanalesCard = ({ 
   title = 'Ventas Semanales', 
@@ -19,73 +19,29 @@ const VentasSemanalesCard = ({
     porcentaje_cambio: percentageChange,
     es_positivo: isPositive
   });
-  const [loading, setLoading] = useState(false);
-  
-  const fetchVentasSemanales = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasHistoricas();
-      
-      // Calcular ventas de la semana actual basándose en el mes actual
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Mapear nombres de meses a números
-      const mesesMap = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-      };
-      
-      // Encontrar ventas del mes actual
-      const ventasMesActual = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesActual && item.ventas > 0;
-      });
-      
-      // Encontrar ventas del mes anterior
-      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-      const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-      const ventasMesAnterior = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesAnterior && item.ventas > 0;
-      });
-      
-      const ventasActual = ventasMesActual?.ventas || 0;
-      const ventasAnterior = ventasMesAnterior?.ventas || 0;
-      
-      // Calcular ventas semanales (aproximadamente 1/4 del mes)
-      const ventasSemanaActual = Math.floor(ventasActual / 4);
-      const ventasSemanaPasada = Math.floor(ventasAnterior / 4);
-      
-      const porcentajeCambio = ventasSemanaPasada > 0 
-        ? ((ventasSemanaActual - ventasSemanaPasada) / ventasSemanaPasada) * 100 
-        : 0;
-      
-      setVentasData({
-        ventas_semana_actual: ventasSemanaActual,
-        ventas_semana_pasada: ventasSemanaPasada,
-        pedidos_semana_actual: Math.floor(ventasSemanaActual / 4000), // Estimación de pedidos
-        pedidos_semana_pasada: Math.floor(ventasSemanaPasada / 4000),
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio >= 0
-      });
-    } catch (error) {
-      console.error('Error obteniendo ventas semanales:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // NO hacer cálculo interno - usar SOLO el prop value que viene de Home.jsx
+  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
+  // Este componente solo debe mostrar el valor recibido
 
+  // Calcular valor de la misma semana del mes pasado desde el porcentaje de cambio
+  const calcularValorAnterior = () => {
+    if (percentageChange === 0) return value;
+    if (percentageChange === 100 && value > 0) return 0; // Caso especial: aumento del 100%
+    return value / (1 + percentageChange / 100);
+  };
+  
+  const ventasSemanaMesPasado = calcularValorAnterior();
+  
   // Actualizar datos cuando cambien los props
   useEffect(() => {
     setVentasData(prev => ({
       ...prev,
       ventas_semana_actual: value,
+      ventas_semana_pasada: ventasSemanaMesPasado,
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
-  }, [value, percentageChange, isPositive]);
+  }, [value, percentageChange, isPositive, ventasSemanaMesPasado]);
   
   const formatValue = (val) => {
     if (val >= 1000000) {
@@ -122,12 +78,16 @@ const VentasSemanalesCard = ({
     return `M${puntos.join(' L')}`;
   };
 
-  const tooltipText = `Ventas semanales:
-Semana actual: ${formatValue(ventasData.ventas_semana_actual)}
-Semana pasada: ${formatValue(ventasData.ventas_semana_pasada)}
-Pedidos actual: ${ventasData.pedidos_semana_actual}
-Pedidos pasada: ${ventasData.pedidos_semana_pasada}
-Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
+  const tooltipContent = `📊 VENTAS SEMANALES
+
+💰 Semana actual: ${formatValue(ventasData.ventas_semana_actual)}
+📅 Misma semana mes pasado: ${formatValue(ventasData.ventas_semana_pasada || 0)}
+
+${ventasData.es_positivo ? '📈' : '📉'} Variación: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
+
+💡 Cálculo: Ventas = Bidones vendidos × $2,000
+   Comparación: Semana actual vs Misma semana del mes pasado
+   Basado en pedidos reales de ambos períodos`;
 
   return (
     <Box
@@ -156,7 +116,6 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchVentasSemanales}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -177,7 +136,6 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
@@ -212,12 +170,11 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
             {subtitle}
           </Typography>
         </Box>
-        <Tooltip 
-          title={tooltipText}
+        <InsightTooltip 
+          title={tooltipContent}
           placement="top"
-          arrow
         >
-                     <Chip
+          <Chip
              label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%`}
             sx={{
               background: theme.palette.mode === 'dark' 
@@ -242,7 +199,7 @@ Cambio: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`;
               }
             }}
           />
-        </Tooltip>
+        </InsightTooltip>
       </Box>
       
       {/* Gráfico de tendencia semanal */}
