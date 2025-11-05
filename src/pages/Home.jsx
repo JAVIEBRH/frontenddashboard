@@ -839,13 +839,28 @@ export default function Home() {
       const ticketPromedio = calcularTicketPromedio(ventasMensuales, kpisData.total_pedidos_mes);
       
       // VALIDACIONES Y CORRECCIONES DE INCONSISTENCIAS
-      // 1. Validar que IVA no sea mayor que ventas (si es así, limitar a 19% de ventas)
-      let ivaCorregido = kpisData.iva || 0;
+      // 1. Calcular IVA correctamente: Si el precio de venta INCLUYE IVA (caso Chile)
+      // IVA incluido = Ventas × 0.19 / 1.19 (porque el precio ya incluye el IVA)
+      // Si el precio NO incluye IVA, sería: IVA = Ventas × 0.19
+      // Asumimos que el precio de $2,000 por bidón INCLUYE IVA
+      const IVA_RATE = 0.19; // 19% IVA Chile
+      let ivaCorregido = ventasMensuales * IVA_RATE / (1 + IVA_RATE); // IVA incluido en precio
+      
+      // Si hay un IVA del backend que es diferente, validar y usar el más razonable
+      if (kpisData.iva && kpisData.iva > 0) {
+        // Si el IVA del backend es razonable (entre 15% y 20% de ventas), usarlo
+        const ivaPorcentajeBackend = (kpisData.iva / ventasMensuales) * 100;
+        if (ivaPorcentajeBackend >= 15 && ivaPorcentajeBackend <= 20) {
+          ivaCorregido = kpisData.iva;
+        } else {
+          console.warn(`⚠️ IVA del backend (${ivaPorcentajeBackend.toFixed(1)}%) fuera de rango razonable. Usando cálculo desde ventas.`);
+        }
+      }
+      
+      // Validar que IVA no sea mayor que ventas
       if (ivaCorregido > ventasMensuales) {
-        console.warn('⚠️ IVA mayor que ventas detectado. Corrigiendo...');
-        // El IVA neto puede ser negativo si el IVA de las tapas supera al de las ventas
-        // Pero para visualización, limitamos a que no supere el 19% de ventas
-        ivaCorregido = Math.min(ivaCorregido, ventasMensuales * 0.19);
+        console.warn('⚠️ IVA mayor que ventas detectado. Limitando a máximo razonable...');
+        ivaCorregido = Math.min(ivaCorregido, ventasMensuales * IVA_RATE / (1 + IVA_RATE));
       }
       
       // Los bidones del mes pasado ya se calcularon desde pedidos reales arriba
@@ -868,8 +883,8 @@ export default function Home() {
       // Calcular utilidades del mes pasado
       const utilidadesMesPasado = ventasMesPasado - costosMesPasado;
       
-      // Calcular IVA del mes pasado (19% de ventas del mes pasado)
-      const ivaMesPasado = ventasMesPasado * 0.19;
+      // Calcular IVA del mes pasado (IVA incluido en precio: 19% / 1.19 de ventas)
+      const ivaMesPasado = ventasMesPasado * IVA_RATE / (1 + IVA_RATE);
       
       // 3. Verificar coherencia: Ticket Promedio * Pedidos = Ventas Mensuales (aproximadamente)
       const ventasCalculadasDesdeTicket = ticketPromedio * (kpisData.total_pedidos_mes || 0);
@@ -1338,6 +1353,7 @@ export default function Home() {
           >
             <IvaCard 
               value={data.iva}
+              previousValue={data.ivaMesPasado || 0}
               percentageChange={calcularPorcentajeCambio(data.iva, data.ivaMesPasado || 0)}
               isPositive={data.iva >= (data.ivaMesPasado || 0)}
             />

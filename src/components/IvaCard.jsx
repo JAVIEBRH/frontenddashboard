@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, Chip } from '@mui/material';
-import { getVentasHistoricas } from '../services/api';
 import InsightTooltip from './InsightTooltip';
 
 const IvaCard = ({ 
   title = 'IVA', 
   value = 2375000, 
   subtitle = 'Este mes',
+  previousValue = 0,
   percentageChange = 12.5,
   isPositive = true 
 }) => {
@@ -20,101 +20,20 @@ const IvaCard = ({
     tendencia_mensual: [],
     fecha_analisis: ''
   });
-  const [loading, setLoading] = useState(false);
-  
-  const fetchIvaMensual = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasHistoricas();
-      
-      // Obtener el mes actual y anterior
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Mapear nombres de meses a números
-      const mesesMap = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-      };
-      
-      // Encontrar ventas del mes actual
-      const ventasMesActual = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesActual && item.ventas > 0;
-      });
-      
-      // Encontrar ventas del mes anterior
-      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-      const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-      const ventasMesAnterior = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesAnterior && item.ventas > 0;
-      });
-      
-      // Calcular IVA: 19% de las ventas
-      const ventasActual = ventasMesActual?.ventas || 0;
-      const ventasAnterior = ventasMesAnterior?.ventas || 0;
-      
-      const ivaActual = ventasActual * 0.19;
-      const ivaAnterior = ventasAnterior * 0.19;
-      
-      const porcentajeCambio = ivaAnterior > 0 
-        ? ((ivaActual - ivaAnterior) / ivaAnterior) * 100 
-        : 0;
-      
-      // Generar tendencia mensual basada en datos históricos
-      const tendenciaMensual = [];
-      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      
-      // Obtener los últimos 6 meses de datos
-      for (let i = 5; i >= 0; i--) {
-        const mesIndex = (mesActual - i + 12) % 12;
-        const anio = mesActual - i < 0 ? anioActual - 1 : anioActual;
-        
-        const ventasMes = data.find(item => {
-          const mesNumero = mesesMap[item.name];
-          return mesNumero === mesIndex && item.ventas > 0;
-        });
-        
-        const ventasMesValor = ventasMes?.ventas || 0;
-        const ivaMes = ventasMesValor * 0.19;
-        
-        tendenciaMensual.push({
-          mes: mesesNombres[mesIndex],
-          iva: ivaMes
-        });
-      }
-      
-      setIvaData({
-        iva_mes_actual: ivaActual,
-        iva_mes_anterior: ivaAnterior,
-        porcentaje_cambio: porcentajeCambio,
-        es_positivo: porcentajeCambio >= 0,
-        tendencia_mensual: tendenciaMensual,
-        fecha_analisis: hoy.toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo IVA mensual:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    fetchIvaMensual();
-  }, []);
+  // NO calcular IVA internamente - usar el valor que viene desde Home.jsx
+  // El cálculo de IVA se hace en Home.jsx para mantener coherencia con las ventas calculadas desde bidones
 
   // Actualizar datos cuando cambien los props
   useEffect(() => {
-    setIvaData(prev => ({
-      ...prev,
+    setIvaData({
       iva_mes_actual: value,
+      iva_mes_anterior: previousValue || 0,
       porcentaje_cambio: percentageChange,
-      es_positivo: isPositive
-    }));
-  }, [value, percentageChange, isPositive]);
+      es_positivo: isPositive,
+      tendencia_mensual: [], // El gráfico se generará de forma estática o se puede eliminar
+      fecha_analisis: new Date().toISOString()
+    });
+  }, [value, previousValue, percentageChange, isPositive]);
   
   const formatValue = (val) => {
     if (val >= 1000000) {
@@ -149,8 +68,12 @@ const IvaCard = ({
 
 ${ivaData.es_positivo ? '📈' : '📉'} Variación: ${ivaData.es_positivo ? '+' : ''}${ivaData.porcentaje_cambio.toFixed(1)}%
 
-💡 Cálculo: IVA = 19% de las ventas mensuales
-   Basado en ventas = Bidones × $2,000`;
+💡 Cálculo: IVA incluido en precio de venta
+   IVA = Ventas × 19% / 1.19 (precio ya incluye IVA)
+   Basado en ventas = Bidones × $2,000
+   
+   El precio de $2,000 por bidón ya incluye el 19% de IVA,
+   por lo que el IVA real es: $2,000 × 0.19 / 1.19 = $319.33 por bidón`;
 
   return (
     <Box
@@ -179,7 +102,6 @@ ${ivaData.es_positivo ? '📈' : '📉'} Variación: ${ivaData.es_positivo ? '+'
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchIvaMensual}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -200,7 +122,6 @@ ${ivaData.es_positivo ? '📈' : '📉'} Variación: ${ivaData.es_positivo ? '+'
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 
