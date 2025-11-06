@@ -26,6 +26,14 @@ const PedidosPorBloqueDonut = ({
       console.log(`🕐 [${timestamp}] Obteniendo pedidos por horario...`);
       const data = await getPedidosPorHorario();
       console.log(`✅ [${timestamp}] Pedidos por horario obtenidos:`, data);
+      console.log(`📊 [${timestamp}] Valores recibidos:`, {
+        pedidos_manana: data.pedidos_manana,
+        pedidos_tarde: data.pedidos_tarde,
+        total: data.total,
+        total_mes: data.total_mes,
+        porcentaje_manana: data.porcentaje_manana,
+        porcentaje_tarde: data.porcentaje_tarde
+      });
       
       setHorarioData(prevData => {
         const nuevosDatos = {

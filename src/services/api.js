@@ -409,6 +409,14 @@ export const getPedidosPorHorario = async () => {
     }
     const data = await response.json();
     console.log('Pedidos por horario obtenidos:', data);
+    console.log('📊 Valores específicos del endpoint:', {
+      pedidos_manana: data.pedidos_manana,
+      pedidos_tarde: data.pedidos_tarde,
+      total: data.total,
+      total_mes: data.total_mes,
+      porcentaje_manana: data.porcentaje_manana,
+      porcentaje_tarde: data.porcentaje_tarde
+    });
     return data;
   } catch (error) {
     console.error('Error obteniendo pedidos por horario:', error);
