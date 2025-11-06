@@ -10,9 +10,10 @@ const PedidosPorBloqueDonut = ({
 }) => {
   const theme = useTheme();
   const [horarioData, setHorarioData] = useState({
-    pedidos_manana: pedidosManana,
-    pedidos_tarde: pedidosTarde,
-    total: pedidosManana + pedidosTarde,
+    pedidos_manana: 0,
+    pedidos_tarde: 0,
+    total: 0,
+    total_mes: 0,
     porcentaje_manana: 0,
     porcentaje_tarde: 0
   });
@@ -45,11 +46,15 @@ const PedidosPorBloqueDonut = ({
           porcentaje_tarde: data.porcentaje_tarde || 0
         };
         
+        console.log('📝 [Estado] Actualizando horarioData:', nuevosDatos);
+        console.log('📝 [Estado] Estado anterior:', prevData);
+        
         // Comparar con datos anteriores
         const datosCambiaron = 
           prevData.pedidos_manana !== nuevosDatos.pedidos_manana ||
           prevData.pedidos_tarde !== nuevosDatos.pedidos_tarde ||
-          prevData.total !== nuevosDatos.total;
+          prevData.total !== nuevosDatos.total ||
+          prevData.total_mes !== nuevosDatos.total_mes;
         
         if (datosCambiaron) {
           console.log('🔄 DATOS CAMBIARON:', {
@@ -95,6 +100,11 @@ const PedidosPorBloqueDonut = ({
   const porcentajeTarde = (horarioData.porcentaje_tarde !== undefined && horarioData.porcentaje_tarde !== null)
     ? horarioData.porcentaje_tarde 
     : (total > 0 ? (horarioData.pedidos_tarde / total) * 100 : 0);
+  
+  // Log para debugging
+  console.log('🎨 [Render] horarioData actual:', horarioData);
+  console.log('🎨 [Render] total calculado:', total);
+  console.log('🎨 [Render] porcentajes calculados:', { porcentajeManana, porcentajeTarde });
   
   const radius = 60;
   const strokeWidth = 12;
