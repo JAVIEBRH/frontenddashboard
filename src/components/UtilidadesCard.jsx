@@ -131,7 +131,6 @@ ${utilidadesData.es_positivo ? '📈' : '📉'} Variación: ${utilidadesData.es_
             : '0 8px 30px rgba(0, 0, 0, 0.12)'
         }
       }}
-      onClick={fetchUtilidadesMensuales}
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
         <Box sx={{ flex: 1 }}>
@@ -152,7 +151,6 @@ ${utilidadesData.es_positivo ? '📈' : '📉'} Variación: ${utilidadesData.es_
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 

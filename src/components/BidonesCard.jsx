@@ -141,7 +141,6 @@ ${bidonesData.es_positivo ? '📈' : '📉'} Variación: ${bidonesData.es_positi
             }}
           >
             {title}
-            {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
           </Typography>
           <Typography 
             variant="h3" 

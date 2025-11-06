@@ -17,30 +17,61 @@ const PedidosPorBloqueDonut = ({
     porcentaje_tarde: 0
   });
   const [loading, setLoading] = useState(false);
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   
   const fetchPedidosPorHorario = async () => {
     try {
       setLoading(true);
+      const timestamp = new Date().toLocaleTimeString('es-CL');
+      console.log(`🕐 [${timestamp}] Obteniendo pedidos por horario...`);
       const data = await getPedidosPorHorario();
-      setHorarioData({
-        pedidos_manana: data.pedidos_manana || 0,
-        pedidos_tarde: data.pedidos_tarde || 0,
-        total: data.total || 0,
-        porcentaje_manana: data.porcentaje_manana || 0,
-        porcentaje_tarde: data.porcentaje_tarde || 0
+      console.log(`✅ [${timestamp}] Pedidos por horario obtenidos:`, data);
+      
+      setHorarioData(prevData => {
+        const nuevosDatos = {
+          pedidos_manana: data.pedidos_manana || 0,
+          pedidos_tarde: data.pedidos_tarde || 0,
+          total: data.total || 0,
+          porcentaje_manana: data.porcentaje_manana || 0,
+          porcentaje_tarde: data.porcentaje_tarde || 0
+        };
+        
+        // Comparar con datos anteriores
+        const datosCambiaron = 
+          prevData.pedidos_manana !== nuevosDatos.pedidos_manana ||
+          prevData.pedidos_tarde !== nuevosDatos.pedidos_tarde ||
+          prevData.total !== nuevosDatos.total;
+        
+        if (datosCambiaron) {
+          console.log('🔄 DATOS CAMBIARON:', {
+            anterior: prevData,
+            nuevo: nuevosDatos
+          });
+        } else {
+          console.log('⚠️ Datos sin cambios');
+        }
+        
+        return nuevosDatos;
       });
+      
+      setUltimaActualizacion(timestamp);
     } catch (error) {
-      console.error('Error obteniendo pedidos por horario:', error);
+      console.error('❌ Error obteniendo pedidos por horario:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Cargar datos inmediatamente
     fetchPedidosPorHorario();
     
-    // Actualizar cada 15 minutos
-    const interval = setInterval(fetchPedidosPorHorario, 15 * 60 * 1000);
+    // Actualizar cada 30 segundos para pruebas (luego cambiar a 1 minuto)
+    const interval = setInterval(() => {
+      const timestamp = new Date().toLocaleTimeString('es-CL');
+      console.log(`🔄 [${timestamp}] Actualizando pedidos por horario (intervalo automático)...`);
+      fetchPedidosPorHorario();
+    }, 30 * 1000); // 30 segundos para pruebas
     
     return () => clearInterval(interval);
   }, []);
@@ -84,21 +115,35 @@ const PedidosPorBloqueDonut = ({
       }}
       onClick={fetchPedidosPorHorario}
     >
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          fontWeight: 700, 
-          color: theme.palette.text.primary, 
-          mb: 2, 
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          letterSpacing: '0.025em',
-          fontSize: '1rem'
-        }}
-      >
-        {title}
-        {loading && <Typography component="span" sx={{ ml: 1, fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 700, 
+            color: theme.palette.text.primary, 
+            textAlign: 'center',
+            textTransform: 'uppercase',
+            letterSpacing: '0.025em',
+            fontSize: '1rem',
+            flex: 1
+          }}
+        >
+          {title}
+        </Typography>
+        {loading && <Typography component="span" sx={{ fontSize: '0.8rem', color: '#9370db' }}>🔄</Typography>}
+        {ultimaActualizacion && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontSize: '0.7rem', 
+              color: theme.palette.text.secondary,
+              ml: 1
+            }}
+          >
+            {ultimaActualizacion}
+          </Typography>
+        )}
+      </Box>
       
       <Box sx={{ 
         display: 'flex', 
@@ -168,6 +213,18 @@ const PedidosPorBloqueDonut = ({
             >
               {total}
             </Typography>
+            {loading && (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.6rem', 
+                  color: '#9370db',
+                  mt: 0.5
+                }}
+              >
+                Actualizando...
+              </Typography>
+            )}
             <Typography 
               variant="caption" 
               sx={{ 
