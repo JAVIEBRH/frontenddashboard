@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { 
   Box, 
@@ -57,6 +57,109 @@ const RentabilidadCard = ({ kpiData = null }) => {
     insights: { width: 480, height: 360 },
     recomendaciones: { width: 480, height: 360 }
   });
+
+  const proyeccionesSuavizadas = useMemo(() => {
+    const PESO_PROMEDIO = 0.6;
+    const PESO_MES_ACTUAL = 0.3;
+    const PESO_ESTACIONALIDAD = 0.1;
+    const LIMITE_VARIACION = 0.3;
+
+    const clamp = (value, min, max) => {
+      if (!isFinite(value)) return min;
+      return Math.min(Math.max(value, min), max);
+    };
+
+    if (!rentabilidadData) {
+      return {
+        mes1: 0,
+        mes2: 0,
+        mes3: 0,
+        min: 0,
+        max: 0,
+        insight: 'Sin datos suficientes para generar proyección.',
+        tendencia: 0,
+        promedio: 0
+      };
+    }
+
+    const analisisAvanzado = rentabilidadData.analisis_avanzado ?? {};
+    const crecimiento = analisisAvanzado.crecimiento ?? {};
+    const estacionalidad = analisisAvanzado.estacionalidad ?? {};
+    const metricasPrincipales = rentabilidadData.metricas_principales ?? {};
+
+    const ventasTrimestre = crecimiento.ventas_trimestre ?? 0;
+    const mesesConsiderados = ventasTrimestre > 0 ? 3 : 1;
+    let promedioHistorico = ventasTrimestre > 0 ? ventasTrimestre / mesesConsiderados : 0;
+
+    if (promedioHistorico <= 0) {
+      promedioHistorico = metricasPrincipales.ventas_mes ?? 0;
+    }
+
+    const ventasMesActual = crecimiento.ventas_mes_real ?? metricasPrincipales.ventas_mes ?? 0;
+    const diasCubiertos = crecimiento.dias_cubiertos_mes_actual ?? 0;
+    const factorEstacional = estacionalidad.factor_estacional ?? 1;
+    const ajusteEstacional = promedioHistorico * factorEstacional;
+    const tendenciaMensual = (crecimiento.mensual ?? 0) / 100;
+    const tendenciaSuavizada = clamp(tendenciaMensual, -LIMITE_VARIACION, LIMITE_VARIACION);
+
+    const minPermitido = promedioHistorico * (1 - LIMITE_VARIACION);
+    const maxPermitido = promedioHistorico * (1 + LIMITE_VARIACION);
+
+    let proyeccionBase = promedioHistorico;
+
+    if (diasCubiertos >= 10 && promedioHistorico > 0) {
+      proyeccionBase =
+        promedioHistorico * PESO_PROMEDIO +
+        ventasMesActual * PESO_MES_ACTUAL +
+        ajusteEstacional * PESO_ESTACIONALIDAD;
+    }
+
+    proyeccionBase = clamp(proyeccionBase, minPermitido, maxPermitido);
+
+    const proyectar = (valor, factor) => clamp(valor * (1 + factor), minPermitido, maxPermitido);
+
+    const mes1 = clamp(proyeccionBase, 0, Number.POSITIVE_INFINITY);
+    const mes2 = proyectar(mes1, tendenciaSuavizada * 0.5);
+    const mes3 = proyectar(mes2, tendenciaSuavizada * 0.4);
+
+    const rangoMin = clamp(minPermitido, 0, Number.POSITIVE_INFINITY);
+    const rangoMax = Math.max(maxPermitido, rangoMin);
+
+    let insight;
+    if (mes1 < promedioHistorico * 0.85) {
+      insight = 'Ventas iniciales lentas — monitorear impulso comercial.';
+    } else if (mes1 > promedioHistorico * 1.15) {
+      insight = 'Proyección optimista — mantener estrategia actual.';
+    } else {
+      insight = 'Proyección estable — dentro del rango esperado.';
+    }
+
+    return {
+      mes1,
+      mes2,
+      mes3,
+      min: rangoMin,
+      max: rangoMax,
+      insight,
+      tendencia: tendenciaSuavizada * 100,
+      promedio: promedioHistorico
+    };
+  }, [rentabilidadData]);
+
+  const {
+    mes1: proyeccionMes1,
+    mes2: proyeccionMes2,
+    mes3: proyeccionMes3,
+    min: rangoEstimadoMin,
+    max: rangoEstimadoMax,
+    insight: insightProyeccion,
+    tendencia: tendenciaProyeccion
+  } = proyeccionesSuavizadas;
+
+  useEffect(() => {
+    console.log('🔍 Proyecciones suavizadas calculadas:', proyeccionesSuavizadas);
+    console.log('🔍 Datos originales de proyección:', rentabilidadData?.analisis_avanzado?.proyecciones);
+  }, [proyeccionesSuavizadas, rentabilidadData]);
 
   // Calcular análisis financiero desde datos del Home
   const calcularAnalisisFinanciero = (kpiData) => {
@@ -1387,7 +1490,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(16,185,129,0.35)' : '0 0 8px rgba(16,185,129,0.2)'
                         }}
                       >
-                        ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_1 || 0).toLocaleString()}
+                        ${Math.round(proyeccionMes1 || 0).toLocaleString('es-CL')}
                       </Typography>
                     </Box>
                   </Grid>
@@ -1429,7 +1532,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(59,130,246,0.3)' : '0 0 8px rgba(59,130,246,0.2)'
                         }}
                       >
-                        ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_2 || 0).toLocaleString()}
+                        ${Math.round(proyeccionMes2 || 0).toLocaleString('es-CL')}
                       </Typography>
                     </Box>
                   </Grid>
@@ -1471,11 +1574,33 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(59,130,246,0.28)' : '0 0 8px rgba(59,130,246,0.18)'
                         }}
                       >
-                        ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_3 || 0).toLocaleString()}
+                        ${Math.round(proyeccionMes3 || 0).toLocaleString('es-CL')}
                       </Typography>
                     </Box>
                   </Grid>
                 </Grid>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    mb: 1.5,
+                    textAlign: 'center'
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: theme.palette.mode === 'dark' ? 'rgba(148, 197, 253, 0.85)' : '#334155',
+                      fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
+                    }}
+                  >
+                    Rango estimado:&nbsp;
+                    ${Math.round(rangoEstimadoMin || 0).toLocaleString('es-CL')} – $
+                    {Math.round(rangoEstimadoMax || 0).toLocaleString('es-CL')}
+                  </Typography>
+                </Box>
                 
                 <Box sx={{ 
                   display: 'flex', 
@@ -1497,12 +1622,12 @@ const RentabilidadCard = ({ kpiData = null }) => {
                     Tendencia
                   </Typography>
                   <Chip 
-                    icon={getIconByValue(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0)}
-                    label={formatPercentage(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual)}
+                    icon={getIconByValue(tendenciaProyeccion)}
+                    label={formatPercentage(tendenciaProyeccion)}
                     size="small"
                     sx={{ 
-                      bgcolor: getColorByValue(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0) + '15',
-                      color: getColorByValue(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0),
+                      bgcolor: getColorByValue(tendenciaProyeccion) + '15',
+                      color: getColorByValue(tendenciaProyeccion),
                       fontWeight: 700,
                       fontSize: '0.9rem',
                       height: 28,
@@ -1544,9 +1669,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                       fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                     }}
                   >
-                    {(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0) > 0
-                      ? 'Proyección positiva - preparar para crecimiento'
-                      : 'Proyección estable - mantener estrategia actual'}
+                    {insightProyeccion}
                   </Typography>
                 </Box>
               </Box>
