@@ -32,6 +32,7 @@ const PedidosPorBloqueDonut = ({
           pedidos_manana: data.pedidos_manana || 0,
           pedidos_tarde: data.pedidos_tarde || 0,
           total: data.total || 0,
+          total_mes: data.total_mes || data.total || 0, // Total del mes actual
           porcentaje_manana: data.porcentaje_manana || 0,
           porcentaje_tarde: data.porcentaje_tarde || 0
         };
@@ -76,7 +77,9 @@ const PedidosPorBloqueDonut = ({
     return () => clearInterval(interval);
   }, []);
   
-  const total = horarioData.pedidos_manana + horarioData.pedidos_tarde;
+  // Usar total_mes si está disponible, sino usar la suma de los rangos
+  const total = horarioData.total_mes || (horarioData.pedidos_manana + horarioData.pedidos_tarde);
+  // Calcular porcentajes basados en el total del mes para reflejar mejor la distribución
   const porcentajeManana = total > 0 ? (horarioData.pedidos_manana / total) * 100 : 0;
   const porcentajeTarde = total > 0 ? (horarioData.pedidos_tarde / total) * 100 : 0;
   
@@ -296,7 +299,7 @@ const PedidosPorBloqueDonut = ({
               fontSize: '0.7rem'
             }}
           >
-            11-13h
+            10-14h
           </Typography>
         </Box>
         
@@ -350,7 +353,7 @@ const PedidosPorBloqueDonut = ({
               fontSize: '0.7rem'
             }}
           >
-            15-19h
+            14-20h
           </Typography>
         </Box>
       </Box>
