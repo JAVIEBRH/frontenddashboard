@@ -87,9 +87,14 @@ const PedidosPorBloqueDonut = ({
   
   // Usar total_mes si está disponible, sino usar la suma de los rangos
   const total = horarioData.total_mes || (horarioData.pedidos_manana + horarioData.pedidos_tarde);
-  // Calcular porcentajes basados en el total del mes para reflejar mejor la distribución
-  const porcentajeManana = total > 0 ? (horarioData.pedidos_manana / total) * 100 : 0;
-  const porcentajeTarde = total > 0 ? (horarioData.pedidos_tarde / total) * 100 : 0;
+  // Usar porcentajes del backend (basados en muestra histórica completa)
+  // Si no vienen del backend (undefined/null), calcular localmente como fallback
+  const porcentajeManana = (horarioData.porcentaje_manana !== undefined && horarioData.porcentaje_manana !== null)
+    ? horarioData.porcentaje_manana 
+    : (total > 0 ? (horarioData.pedidos_manana / total) * 100 : 0);
+  const porcentajeTarde = (horarioData.porcentaje_tarde !== undefined && horarioData.porcentaje_tarde !== null)
+    ? horarioData.porcentaje_tarde 
+    : (total > 0 ? (horarioData.pedidos_tarde / total) * 100 : 0);
   
   const radius = 60;
   const strokeWidth = 12;
