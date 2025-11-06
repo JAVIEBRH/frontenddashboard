@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { formatCurrency } from '../utils/formatters';
 import InsightTooltip from './InsightTooltip';
 
