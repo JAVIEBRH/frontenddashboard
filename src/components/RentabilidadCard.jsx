@@ -1353,18 +1353,25 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   <Grid size={4}>
                     <Box sx={{ 
                       textAlign: 'center', 
-                      p: 1.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(5, 150, 105, 0.08)', 
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(5, 150, 105, 0.15)'}`
+                      p: 1.8, 
+                      borderRadius: 2.5,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(16,185,129,0.08) 100%)'
+                        : 'linear-gradient(135deg, rgba(34,197,94,0.16) 0%, rgba(167,243,208,0.12) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(52, 211, 153, 0.45)' : 'rgba(34, 197, 94, 0.35)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 10px 26px rgba(16, 185, 129, 0.26)'
+                        : '0 8px 22px rgba(16, 185, 129, 0.18)'
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontSize: '0.875rem', 
                           fontWeight: 600,
-                          color: 'text.primary',
-                          mb: 0.5,
+                          color: theme.palette.mode === 'dark' ? '#6ee7b7' : '#047857',
+                          mb: 0.75,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
                         }}
                       >
@@ -1374,9 +1381,10 @@ const RentabilidadCard = ({ kpiData = null }) => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          fontSize: '0.95rem',
-                          color: 'text.primary',
+                          fontSize: '1.05rem',
+                          color: theme.palette.mode === 'dark' ? '#ecfdf5' : '#065f46',
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                          textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(16,185,129,0.35)' : '0 0 8px rgba(16,185,129,0.2)'
                         }}
                       >
                         ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_1 || 0).toLocaleString()}
@@ -1387,18 +1395,25 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   <Grid size={4}>
                     <Box sx={{ 
                       textAlign: 'center', 
-                      p: 1.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(5, 150, 105, 0.08)', 
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(5, 150, 105, 0.15)'}`
+                      p: 1.8, 
+                      borderRadius: 2.5,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(52,211,153,0.18) 0%, rgba(56,189,248,0.08) 100%)'
+                        : 'linear-gradient(135deg, rgba(110,231,183,0.18) 0%, rgba(59,130,246,0.12) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.3)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 10px 26px rgba(56, 189, 248, 0.24)'
+                        : '0 8px 20px rgba(59, 130, 246, 0.18)'
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontSize: '0.875rem', 
                           fontWeight: 600,
-                          color: 'text.primary',
-                          mb: 0.5,
+                          color: theme.palette.mode === 'dark' ? '#bae6fd' : '#1d4ed8',
+                          mb: 0.75,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                         }}
                       >
@@ -1408,9 +1423,10 @@ const RentabilidadCard = ({ kpiData = null }) => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          fontSize: '0.95rem',
-                          color: 'text.primary',
+                          fontSize: '1.05rem',
+                          color: theme.palette.mode === 'dark' ? '#dbeafe' : '#1d4ed8',
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                          textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(59,130,246,0.3)' : '0 0 8px rgba(59,130,246,0.2)'
                         }}
                       >
                         ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_2 || 0).toLocaleString()}
@@ -1421,18 +1437,25 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   <Grid size={4}>
                     <Box sx={{ 
                       textAlign: 'center', 
-                      p: 1.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(5, 150, 105, 0.08)', 
-                      borderRadius: 2,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(5, 150, 105, 0.15)'}`
+                      p: 1.8, 
+                      borderRadius: 2.5,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      background: theme.palette.mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(147,197,253,0.08) 100%)'
+                        : 'linear-gradient(135deg, rgba(191,219,254,0.18) 0%, rgba(147,197,253,0.12) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(147, 197, 253, 0.4)' : 'rgba(59, 130, 246, 0.28)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 10px 24px rgba(147, 197, 253, 0.24)'
+                        : '0 8px 18px rgba(147, 197, 253, 0.16)' 
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontSize: '0.875rem', 
                           fontWeight: 600,
-                          color: 'text.primary',
-                          mb: 0.5,
+                          color: theme.palette.mode === 'dark' ? '#bfdbfe' : '#2563eb',
+                          mb: 0.75,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif'
                         }}
                       >
@@ -1442,9 +1465,10 @@ const RentabilidadCard = ({ kpiData = null }) => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          fontSize: '0.95rem',
-                          color: 'text.primary',
+                          fontSize: '1.05rem',
+                          color: theme.palette.mode === 'dark' ? '#e0f2fe' : '#1d4ed8',
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
+                          textShadow: theme.palette.mode === 'dark' ? '0 0 12px rgba(59,130,246,0.28)' : '0 0 8px rgba(59,130,246,0.18)'
                         }}
                       >
                         ${(rentabilidadData?.analisis_avanzado?.proyecciones?.mes_3 || 0).toLocaleString()}
@@ -1474,7 +1498,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   </Typography>
                   <Chip 
                     icon={getIconByValue(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0)}
-                    label={`${rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0}%`}
+                    label={formatPercentage(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual)}
                     size="small"
                     sx={{ 
                       bgcolor: getColorByValue(rentabilidadData?.analisis_avanzado?.proyecciones?.tendencia_mensual || 0) + '15',
