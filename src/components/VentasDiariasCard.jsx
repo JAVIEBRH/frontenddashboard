@@ -167,7 +167,7 @@ ${ventasData.es_positivo ? '📈' : '📉'} Variación: ${ventasData.es_positivo
           placement="top"
         >
           <Chip
-            label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio}%`}
+            label={`${ventasData.es_positivo ? '+' : ''}${Number(ventasData.porcentaje_cambio || 0).toFixed(1)}%`}
             sx={{
               background: theme.palette.mode === 'dark' 
                 ? 'rgba(147, 112, 219, 0.2)' 
