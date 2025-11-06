@@ -441,6 +441,8 @@ const RentabilidadCard = ({ kpiData = null }) => {
     return <Assessment />;
   };
 
+  const formatPercentage = (value) => `${Number(value || 0).toFixed(1)}%`;
+
   // Funciones para manejar el drag and drop
   const handleSectionMove = (id, position) => {
     setSectionPositions(prev => ({
@@ -580,7 +582,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   </Typography>
                   <Chip 
                     icon={getIconByValue(rentabilidadData?.analisis_avanzado?.crecimiento?.mensual || 0)}
-                    label={`${rentabilidadData?.analisis_avanzado?.crecimiento?.mensual || 0}%`}
+                    label={formatPercentage(rentabilidadData?.analisis_avanzado?.crecimiento?.mensual)}
                     size="small"
                     sx={{ 
                       bgcolor: getColorByValue(rentabilidadData?.analisis_avanzado?.crecimiento?.mensual || 0) + '15',
@@ -607,7 +609,7 @@ const RentabilidadCard = ({ kpiData = null }) => {
                   </Typography>
                   <Chip 
                     icon={getIconByValue(rentabilidadData?.analisis_avanzado?.crecimiento?.trimestral || 0)}
-                    label={`${rentabilidadData?.analisis_avanzado?.crecimiento?.trimestral || 0}%`}
+                    label={formatPercentage(rentabilidadData?.analisis_avanzado?.crecimiento?.trimestral)}
                     size="small"
                     sx={{ 
                       bgcolor: getColorByValue(rentabilidadData?.analisis_avanzado?.crecimiento?.trimestral || 0) + '15',
