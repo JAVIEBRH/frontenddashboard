@@ -1577,16 +1577,22 @@ const RentabilidadCard = ({ kpiData = null }) => {
                     <Box sx={{ 
                       textAlign: 'center', 
                       p: 2.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(5, 150, 105, 0.1)', 
                       borderRadius: 3,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(5, 150, 105, 0.2)'}`,
-                      boxShadow: theme.shadows[1]
+                      position: 'relative',
+                      overflow: 'hidden',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.1) 100%)' 
+                        : 'linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.08) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(34,197,94,0.45)' : 'rgba(5,150,105,0.35)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 12px 30px rgba(16, 185, 129, 0.28)'
+                        : '0 10px 26px rgba(5, 150, 105, 0.22)'
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          color: theme.palette.mode === 'dark' ? '#22c55e' : '#059669', 
+                          color: theme.palette.mode === 'dark' ? '#34d399' : '#047857', 
                           fontSize: '1rem',
                           mb: 1,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
@@ -1605,12 +1611,12 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           fontSize: '1.75rem'
                         }}
                       >
-                        {rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.optimista?.margen || 0}%
+                        {formatPercentage(rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.optimista?.margen ?? 0)}
                       </Typography>
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary', 
+                          color: theme.palette.mode === 'dark' ? 'rgba(226, 252, 239, 0.8)' : 'rgba(4, 120, 87, 0.8)', 
                           fontSize: '0.875rem',
                           fontWeight: 500,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
@@ -1625,16 +1631,22 @@ const RentabilidadCard = ({ kpiData = null }) => {
                     <Box sx={{ 
                       textAlign: 'center', 
                       p: 2.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(107, 114, 128, 0.1)', 
                       borderRadius: 3,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(107, 114, 128, 0.3)' : 'rgba(107, 114, 128, 0.2)'}`,
-                      boxShadow: theme.shadows[1]
+                      position: 'relative',
+                      overflow: 'hidden',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'linear-gradient(135deg, rgba(148,163,184,0.22) 0%, rgba(100,116,139,0.12) 100%)' 
+                        : 'linear-gradient(135deg, rgba(148,163,184,0.18) 0%, rgba(107,114,128,0.1) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(148,163,184,0.4)' : 'rgba(107,114,128,0.35)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 12px 28px rgba(148, 163, 184, 0.25)'
+                        : '0 10px 24px rgba(107, 114, 128, 0.2)'
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          color: theme.palette.mode === 'dark' ? '#9ca3af' : '#6b7280', 
+                          color: theme.palette.mode === 'dark' ? '#e5e7eb' : '#4b5563', 
                           fontSize: '1rem',
                           mb: 1,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
@@ -1653,12 +1665,16 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           fontSize: '1.75rem'
                         }}
                       >
-                        {rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.actual?.margen || rentabilidadData?.metricas_principales?.margen_neto_porcentaje || 0}%
+                        {formatPercentage(
+                          rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.actual?.margen ??
+                          rentabilidadData?.metricas_principales?.margen_neto_porcentaje ??
+                          0
+                        )}
                       </Typography>
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary', 
+                          color: theme.palette.mode === 'dark' ? 'rgba(226, 232, 240, 0.85)' : 'rgba(71, 85, 105, 0.85)', 
                           fontSize: '0.875rem',
                           fontWeight: 500,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
@@ -1673,16 +1689,22 @@ const RentabilidadCard = ({ kpiData = null }) => {
                     <Box sx={{ 
                       textAlign: 'center', 
                       p: 2.5, 
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(220, 38, 38, 0.1)', 
                       borderRadius: 3,
-                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(220, 38, 38, 0.2)'}`,
-                      boxShadow: theme.shadows[1]
+                      position: 'relative',
+                      overflow: 'hidden',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'linear-gradient(135deg, rgba(239,68,68,0.22) 0%, rgba(220,38,38,0.12) 100%)' 
+                        : 'linear-gradient(135deg, rgba(248,113,113,0.2) 0%, rgba(220,38,38,0.1) 100%)',
+                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(248,113,113,0.45)' : 'rgba(220,38,38,0.35)'}`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? '0 12px 32px rgba(248, 113, 113, 0.28)'
+                        : '0 10px 26px rgba(220, 38, 38, 0.22)'
                     }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           fontWeight: 700, 
-                          color: theme.palette.mode === 'dark' ? '#ef4444' : '#dc2626', 
+                          color: theme.palette.mode === 'dark' ? '#f87171' : '#b91c1c', 
                           fontSize: '1rem',
                           mb: 1,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
@@ -1701,12 +1723,12 @@ const RentabilidadCard = ({ kpiData = null }) => {
                           fontSize: '1.75rem'
                         }}
                       >
-                        {rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.pesimista?.margen || 0}%
+                        {formatPercentage(rentabilidadData?.analisis_avanzado?.escenarios_rentabilidad?.pesimista?.margen ?? 0)}
                       </Typography>
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary', 
+                          color: theme.palette.mode === 'dark' ? 'rgba(254, 226, 226, 0.85)' : 'rgba(220, 38, 38, 0.75)', 
                           fontSize: '0.875rem',
                           fontWeight: 500,
                           fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
