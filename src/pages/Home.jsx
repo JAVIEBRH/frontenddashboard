@@ -245,7 +245,7 @@ export default function Home() {
                 const bidonesDesdePrecio = Math.round(precio / PRECIO_BIDON);
                 // Si hay una discrepancia grande (>20%), usar el cálculo desde precio
                 if (bidones > 0 && Math.abs(bidones - bidonesDesdePrecio) / bidonesDesdePrecio > 0.2) {
-                  console.warn(`⚠️ Discrepancia en pedido: ordenpedido=${ordenpedidoStr}, bidones=${bidones}, precio=${precio}, bidonesDesdePrecio=${bidonesDesdePrecio}. Usando cálculo desde precio.`);
+                  // Silenciar warning individual - se mostrará resumen al final
                   bidones = bidonesDesdePrecio;
                   tieneCampoExplicito = false; // Marcar como calculado desde precio
                 }
