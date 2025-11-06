@@ -9,9 +9,11 @@ const IvaCard = ({
   subtitle = 'Este mes',
   previousValue = 0,
   percentageChange = 12.5,
-  isPositive = true 
+  isPositive = true,
+  historicalData = []
 }) => {
   const theme = useTheme();
+  const IVA_RATE = 0.19; // 19% IVA
   const [ivaData, setIvaData] = useState({
     iva_mes_actual: value,
     iva_mes_anterior: 0,
@@ -20,19 +22,45 @@ const IvaCard = ({
     tendencia_mensual: [],
     fecha_analisis: ''
   });
-  // NO calcular IVA internamente - usar el valor que viene desde Home.jsx
-  // El cálculo de IVA se hace en Home.jsx para mantener coherencia con las ventas calculadas desde bidones
+  
+  // Calcular tendencia mensual desde datos históricos (IVA = ventas × 0.19 / 1.19)
+  useEffect(() => {
+    if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
+      const ultimosMeses = historicalData.slice(-6);
+      const mesesMap = {
+        'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
+        'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+      };
+      
+      const tendenciaMensual = ultimosMeses.map(item => {
+        const nombreMes = item.name || '';
+        const mesKey = nombreMes.split(' ')[0];
+        const mesAbrev = mesesMap[mesKey] || mesKey;
+        const ventas = item.ventas || 0;
+        const iva = ventas * IVA_RATE / (1 + IVA_RATE); // IVA incluido en precio
+        
+        return {
+          mes: mesAbrev,
+          iva: iva
+        };
+      });
+      
+      setIvaData(prev => ({
+        ...prev,
+        tendencia_mensual: tendenciaMensual
+      }));
+    }
+  }, [historicalData]);
 
   // Actualizar datos cuando cambien los props
   useEffect(() => {
-    setIvaData({
+    setIvaData(prev => ({
+      ...prev,
       iva_mes_actual: value,
       iva_mes_anterior: previousValue || 0,
       porcentaje_cambio: percentageChange,
-      es_positivo: isPositive,
-      tendencia_mensual: [], // El gráfico se generará de forma estática o se puede eliminar
-      fecha_analisis: new Date().toISOString()
-    });
+      es_positivo: isPositive
+    }));
   }, [value, previousValue, percentageChange, isPositive]);
   
   const formatValue = (val) => {

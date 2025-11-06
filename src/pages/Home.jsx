@@ -1276,6 +1276,7 @@ export default function Home() {
               previousValue={data.ventasMesPasado || 0}
               percentageChange={calcularPorcentajeCambio(data.ventasMensuales, data.ventasMesPasado || 0)}
               isPositive={data.ventasMensuales >= (data.ventasMesPasado || 0)}
+              historicalData={data.ventasHistoricas || []}
             />
           </Box>
 
@@ -1337,6 +1338,7 @@ export default function Home() {
               previousValue={data.bidonesMesPasado || 0}
               percentageChange={calcularPorcentajeCambio(data.bidones, data.bidonesMesPasado || 0)}
               isPositive={data.bidones >= (data.bidonesMesPasado || 0)}
+              historicalData={data.ventasHistoricas || []}
             />
           </Box>
 
@@ -1356,6 +1358,7 @@ export default function Home() {
               previousValue={data.ivaMesPasado || 0}
               percentageChange={calcularPorcentajeCambio(data.iva, data.ivaMesPasado || 0)}
               isPositive={data.iva >= (data.ivaMesPasado || 0)}
+              historicalData={data.ventasHistoricas || []}
             />
           </Box>
 
@@ -1374,6 +1377,7 @@ export default function Home() {
               value={data.costos}
               percentageChange={calcularPorcentajeCambio(data.costos, data.costosMesPasado || 0)}
               isPositive={data.costos <= (data.costosMesPasado || 0)}
+              historicalData={data.ventasHistoricas || []}
             />
           </Box>
 

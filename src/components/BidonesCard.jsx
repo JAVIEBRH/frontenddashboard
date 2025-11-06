@@ -9,19 +9,52 @@ const BidonesCard = ({
   previousValue = 0,
   subtitle = 'Este mes',
   percentageChange = 0,
-  isPositive = true 
+  isPositive = true,
+  historicalData = []
 }) => {
   const theme = useTheme();
+  const PRECIO_BIDON = 2000;
   const [bidonesData, setBidonesData] = useState({
     total_bidones: value,
     bidones_mes_actual: value,
     bidones_mes_anterior: 0,
     porcentaje_cambio: percentageChange,
     es_positivo: isPositive,
-    tendencia_diaria: [],
+    tendencia_mensual: [],
     fecha_analisis: ''
   });
-  const [loading, setLoading] = useState(false);
+  
+  // Calcular tendencia mensual desde datos históricos (bidones = ventas / 2000)
+  useEffect(() => {
+    if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
+      // Obtener últimos 6 meses y calcular bidones desde ventas
+      const ultimosMeses = historicalData.slice(-6);
+      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      
+      const mesesMap = {
+        'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
+        'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+      };
+      
+      const tendenciaMensual = ultimosMeses.map(item => {
+        const nombreMes = item.name || '';
+        const mesKey = nombreMes.split(' ')[0];
+        const mesAbrev = mesesMap[mesKey] || mesKey;
+        const ventas = item.ventas || 0;
+        const bidones = Math.round(ventas / PRECIO_BIDON);
+        
+        return {
+          mes: mesAbrev,
+          bidones: bidones
+        };
+      });
+      
+      setBidonesData(prev => ({
+        ...prev,
+        tendencia_mensual: tendenciaMensual
+      }));
+    }
+  }, [historicalData]);
   
   // Actualizar datos cuando cambien los props
   useEffect(() => {
@@ -29,26 +62,22 @@ const BidonesCard = ({
       ...prev,
       total_bidones: value,
       bidones_mes_actual: value,
-      bidones_mes_anterior: previousValue, // Usar el prop directamente
+      bidones_mes_anterior: previousValue,
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
   }, [value, previousValue, percentageChange, isPositive]);
-  
-  // NO hacer cálculo propio - usar SOLO el prop value que viene de Home.jsx
-  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
-  // Este componente solo debe mostrar el valor recibido
 
-  // Generar puntos del gráfico de tendencia diaria
+  // Generar puntos del gráfico de tendencia mensual
   const generarPuntosGrafico = () => {
-    if (!bidonesData.tendencia_diaria || bidonesData.tendencia_diaria.length === 0) {
+    if (!bidonesData.tendencia_mensual || bidonesData.tendencia_mensual.length === 0) {
       return "M0 25 Q20 15 40 20 T80 10 T120 15 T160 5 T200 10";
     }
     
-    const puntos = bidonesData.tendencia_diaria.map((dia, index) => {
-      const x = (index / (bidonesData.tendencia_diaria.length - 1)) * 200;
-      const maxBidones = Math.max(...bidonesData.tendencia_diaria.map(d => d.bidones));
-      const y = maxBidones > 0 ? 40 - (dia.bidones / maxBidones) * 30 : 30;
+    const puntos = bidonesData.tendencia_mensual.map((mes, index) => {
+      const x = (index / (bidonesData.tendencia_mensual.length - 1)) * 200;
+      const maxBidones = Math.max(...bidonesData.tendencia_mensual.map(m => m.bidones));
+      const y = maxBidones > 0 ? 40 - (mes.bidones / maxBidones) * 30 : 30;
       return `${x} ${y}`;
     });
     
@@ -211,20 +240,20 @@ ${bidonesData.es_positivo ? '📈' : '📉'} Variación: ${bidonesData.es_positi
           </defs>
         </svg>
         
-        {/* Etiquetas de días */}
-        {bidonesData.tendencia_diaria && bidonesData.tendencia_diaria.length > 0 && (
+        {/* Etiquetas de meses */}
+        {bidonesData.tendencia_mensual && bidonesData.tendencia_mensual.length > 0 && (
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             mt: 0.5,
             px: 1
           }}>
-            {bidonesData.tendencia_diaria.slice(-6).map((dia, index) => (
+            {bidonesData.tendencia_mensual.map((mes, index) => (
               <Typography 
                 key={index}
                 variant="caption" 
                 sx={{ 
-                  fontSize: '0.75rem', // Estandarizado a 0.75rem
+                  fontSize: '0.75rem',
                   color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary',
                   fontWeight: 500,
                   WebkitFontSmoothing: 'antialiased',
@@ -234,7 +263,7 @@ ${bidonesData.es_positivo ? '📈' : '📉'} Variación: ${bidonesData.es_positi
                   fontDisplay: 'swap'
                 }}
               >
-                {dia.dia}
+                {mes.mes}
               </Typography>
             ))}
           </Box>

@@ -194,6 +194,34 @@ ${costosData.es_positivo ? '📉' : '📈'} Variación: ${costosData.es_positivo
           </defs>
         </svg>
         
+        {/* Etiquetas de meses */}
+        {costosData.tendencia_mensual && costosData.tendencia_mensual.length > 0 && (
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mt: 0.5,
+            px: 1
+          }}>
+            {costosData.tendencia_mensual.map((mes, index) => (
+              <Typography 
+                key={index}
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.75rem',
+                  color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'text.secondary',
+                  fontWeight: 500,
+                  WebkitFontSmoothing: 'antialiased',
+                  MozOsxFontSmoothing: 'grayscale',
+                  textRendering: 'optimizeLegibility',
+                  fontFeatureSettings: '"liga" 1, "kern" 1',
+                  fontDisplay: 'swap'
+                }}
+              >
+                {mes.mes}
+              </Typography>
+            ))}
+          </Box>
+        )}
       </Box>
     </Box>
   );

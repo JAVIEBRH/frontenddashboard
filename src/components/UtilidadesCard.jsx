@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Box, Typography, Chip } from '@mui/material';
-import { getVentasHistoricas } from '../services/api';
+// Los datos históricos vienen como prop desde Home.jsx
 import InsightTooltip from './InsightTooltip';
 
 const UtilidadesCard = ({ 
