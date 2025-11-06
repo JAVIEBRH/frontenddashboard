@@ -9,9 +9,13 @@ const UtilidadesCard = ({
   value = 12500000, 
   subtitle = 'Este mes',
   percentageChange = 12.5,
-  isPositive = true 
+  isPositive = true,
+  historicalData = []
 }) => {
   const theme = useTheme();
+  const COSTO_CUOTA_CAMION = 260000;
+  const COSTO_TAPA_UNITARIA = 60.69;
+  const PRECIO_BIDON = 2000;
   const [utilidadesData, setUtilidadesData] = useState({
     utilidades_mes_actual: value,
     utilidades_mes_anterior: 0,
@@ -20,97 +24,37 @@ const UtilidadesCard = ({
     tendencia_mensual: [],
     fecha_analisis: ''
   });
-  const [loading, setLoading] = useState(false);
   
-  const fetchUtilidadesMensuales = async () => {
-    try {
-      setLoading(true);
-      const data = await getVentasHistoricas();
-      
-      // Obtener el mes actual y anterior
-      const hoy = new Date();
-      const mesActual = hoy.getMonth();
-      const anioActual = hoy.getFullYear();
-      
-      // Mapear nombres de meses a números
+  // Calcular tendencia mensual desde datos históricos
+  useEffect(() => {
+    if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
+      const ultimosMeses = historicalData.slice(-6);
       const mesesMap = {
-        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
+        'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
       };
       
-      // Encontrar ventas del mes actual
-      const ventasMesActual = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesActual && item.ventas > 0;
+      const tendenciaMensual = ultimosMeses.map(item => {
+        const nombreMes = item.name || '';
+        const mesKey = nombreMes.split(' ')[0];
+        const mesAbrev = mesesMap[mesKey] || mesKey;
+        const ventas = item.ventas || 0;
+        const bidones = Math.round(ventas / PRECIO_BIDON);
+        const costos = COSTO_CUOTA_CAMION + (bidones * COSTO_TAPA_UNITARIA);
+        const utilidades = ventas - costos;
+        
+        return {
+          mes: mesAbrev,
+          utilidades: utilidades
+        };
       });
       
-      // Encontrar ventas del mes anterior
-      const mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-      const anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-      const ventasMesAnterior = data.find(item => {
-        const mesNumero = mesesMap[item.name];
-        return mesNumero === mesAnterior && item.ventas > 0;
-      });
-      
-      // Calcular utilidades: ventas - costos (costos = 60% de ventas) SOLO para tendencia/mes anterior
-      const ventasActual = ventasMesActual?.ventas || 0;
-      const ventasAnterior = ventasMesAnterior?.ventas || 0;
-      
-      const costosActual = ventasActual * 0.6;
-      const costosAnterior = ventasAnterior * 0.6;
-      
-      const utilidadesActual = ventasActual - costosActual;
-      const utilidadesAnterior = ventasAnterior - costosAnterior;
-      
-      const porcentajeCambio = utilidadesAnterior > 0 
-        ? ((utilidadesActual - utilidadesAnterior) / utilidadesAnterior) * 100 
-        : 0;
-      
-      // Generar tendencia mensual basada en datos históricos
-      const tendenciaMensual = [];
-      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      
-      // Obtener los últimos 6 meses de datos
-      for (let i = 5; i >= 0; i--) {
-        const mesIndex = (mesActual - i + 12) % 12;
-        const anio = mesActual - i < 0 ? anioActual - 1 : anioActual;
-        
-        const ventasMes = data.find(item => {
-          const mesNumero = mesesMap[item.name];
-          return mesNumero === mesIndex && item.ventas > 0;
-        });
-        
-        const ventasMesValor = ventasMes?.ventas || 0;
-        const costosMes = ventasMesValor * 0.6;
-        const utilidadesMes = ventasMesValor - costosMes;
-        
-        tendenciaMensual.push({
-          mes: mesesNombres[mesIndex],
-          utilidades: utilidadesMes
-        });
-      }
-      
-      setUtilidadesData({
-        // Mantener el valor real entregado por KPIs (prop "value")
-        utilidades_mes_actual: value,
-        utilidades_mes_anterior: utilidadesAnterior,
-        // Usar el porcentaje proveniente de KPIs para coherencia global
-        porcentaje_cambio: percentageChange,
-        es_positivo: isPositive,
-        tendencia_mensual: tendenciaMensual,
-        fecha_analisis: hoy.toISOString()
-      });
-    } catch (error) {
-      console.error('Error obteniendo utilidades mensuales:', error);
-    } finally {
-      setLoading(false);
+      setUtilidadesData(prev => ({
+        ...prev,
+        tendencia_mensual: tendenciaMensual
+      }));
     }
-  };
-
-  // Cargar datos al montar el componente
-  useEffect(() => {
-    fetchUtilidadesMensuales();
-  }, []);
+  }, [historicalData]);
 
   // Actualizar datos cuando cambien los props
   useEffect(() => {

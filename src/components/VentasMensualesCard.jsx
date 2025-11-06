@@ -9,7 +9,8 @@ const VentasMensualesCard = ({
   previousValue = 0,
   subtitle = 'Este mes',
   percentageChange = 0,
-  isPositive = true 
+  isPositive = true,
+  historicalData = []
 }) => {
   const theme = useTheme();
   const [ventasData, setVentasData] = useState({
@@ -17,19 +18,48 @@ const VentasMensualesCard = ({
     ventas_mes_anterior: 0,
     porcentaje_cambio: percentageChange,
     es_positivo: isPositive,
-    tendencia_diaria: [],
+    tendencia_mensual: [],
     fecha_analisis: ''
   });
-  // NO hacer cálculo interno - usar SOLO los props que vienen de Home.jsx
-  // El cálculo ya se hace en Home.jsx desde bidones vendidos reales
-  // Este componente solo debe mostrar el valor recibido
+  
+  // Calcular tendencia mensual desde datos históricos
+  useEffect(() => {
+    if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
+      // Obtener últimos 6 meses de ventas históricas
+      const ultimosMeses = historicalData.slice(-6);
+      const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      
+      // Mapear nombres de meses del backend a abreviaciones
+      const mesesMap = {
+        'Jan': 'Ene', 'Feb': 'Feb', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'May', 'Jun': 'Jun',
+        'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Sep', 'Oct': 'Oct', 'Nov': 'Nov', 'Dec': 'Dic'
+      };
+      
+      const tendenciaMensual = ultimosMeses.map(item => {
+        // Extraer mes del nombre (puede ser "Oct 2024" o similar)
+        const nombreMes = item.name || '';
+        const mesKey = nombreMes.split(' ')[0]; // Tomar solo la primera parte
+        const mesAbrev = mesesMap[mesKey] || mesKey;
+        
+        return {
+          mes: mesAbrev,
+          ventas: item.ventas || 0
+        };
+      });
+      
+      setVentasData(prev => ({
+        ...prev,
+        tendencia_mensual: tendenciaMensual
+      }));
+    }
+  }, [historicalData]);
   
   // Actualizar datos cuando cambien los props
   useEffect(() => {
     setVentasData(prev => ({
       ...prev,
       ventas_mes_actual: value,
-      ventas_mes_anterior: previousValue, // Usar el prop directamente
+      ventas_mes_anterior: previousValue,
       porcentaje_cambio: percentageChange,
       es_positivo: isPositive
     }));
