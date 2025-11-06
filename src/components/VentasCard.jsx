@@ -76,8 +76,6 @@ const VentasCard = ({
 
 💵 Total acumulado: ${formatValue(ventasData.ventas_totales)}
 
-${ventasData.es_positivo ? '📈' : '📉'} Crecimiento: ${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%
-
 📅 Rango de datos:
    Desde: ${formatearFecha(fechaInicio)}
    Hasta: ${formatearFecha(fechaFin)}
@@ -176,31 +174,7 @@ ${ventasData.es_positivo ? '📈' : '📉'} Crecimiento: ${ventasData.es_positiv
           title={tooltipContent}
           placement="top"
         >
-          <Chip
-             label={`${ventasData.es_positivo ? '+' : ''}${ventasData.porcentaje_cambio.toFixed(1)}%`}
-            sx={{
-              background: theme.palette.mode === 'dark' 
-                ? 'rgba(147, 112, 219, 0.2)' 
-                : 'rgba(147, 112, 219, 0.1)',
-              color: ventasData.es_positivo ? '#059669' : '#dc2626',
-              fontWeight: 600,
-              border: `1px solid ${ventasData.es_positivo ? 'rgba(5, 150, 105, 0.2)' : 'rgba(220, 38, 38, 0.2)'}`,
-              fontSize: '0.9rem', // Estandarizado a 0.9rem
-              height: 'auto',
-              cursor: 'help',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'optimizeLegibility',
-              fontFeatureSettings: '"liga" 1, "kern" 1',
-              fontDisplay: 'swap',
-              '& .MuiChip-label': {
-                padding: '8px 12px',
-                WebkitFontSmoothing: 'antialiased',
-                MozOsxFontSmoothing: 'grayscale',
-                textRendering: 'optimizeLegibility'
-              }
-            }}
-          />
+          <Box sx={{ width: 24, height: 24 }} />
         </InsightTooltip>
       </Box>
       
