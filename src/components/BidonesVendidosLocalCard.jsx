@@ -112,7 +112,7 @@ Cambio: ${data.esPositivo ? '+' : ''}${data.porcentajeCambio.toFixed(1)}%`;
       <Box
         sx={{
           background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+            ? 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)'
             : 'linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)',
           borderRadius: 3,
           padding: 3,
@@ -123,8 +123,8 @@ Cambio: ${data.esPositivo ? '+' : ''}${data.porcentajeCambio.toFixed(1)}%`;
           transition: 'all 0.3s ease',
           minHeight: 180,
           border: `1px solid ${theme.palette.mode === 'dark' 
-            ? 'rgba(147, 112, 219, 0.2)' 
-            : 'rgba(147, 112, 219, 0.1)'}`,
+            ? 'rgba(0, 191, 255, 0.2)' 
+            : 'rgba(0, 191, 255, 0.1)'}`,
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -152,8 +152,8 @@ Cambio: ${data.esPositivo ? '+' : ''}${data.porcentajeCambio.toFixed(1)}%`;
         cursor: 'pointer',
         minHeight: 180,
         border: `1px solid ${theme.palette.mode === 'dark' 
-          ? 'rgba(147, 112, 219, 0.2)' 
-          : 'rgba(147, 112, 219, 0.1)'}`,
+          ? 'rgba(0, 191, 255, 0.2)' 
+          : 'rgba(0, 191, 255, 0.1)'}`,
         position: 'relative',
         overflow: 'hidden',
         '&:hover': {
@@ -226,8 +226,8 @@ Cambio: ${data.esPositivo ? '+' : ''}${data.porcentajeCambio.toFixed(1)}%`;
             label={`${data.esPositivo ? '+' : ''}${data.porcentajeCambio.toFixed(1)}%`}
             sx={{
               background: theme.palette.mode === 'dark' 
-                ? 'rgba(147, 112, 219, 0.2)' 
-                : 'rgba(147, 112, 219, 0.1)',
+                ? 'rgba(0, 191, 255, 0.2)' 
+                : 'rgba(0, 191, 255, 0.1)',
               color: data.esPositivo ? '#059669' : '#dc2626',
               fontWeight: 600,
               border: `1px solid ${data.esPositivo ? 'rgba(5, 150, 105, 0.2)' : 'rgba(220, 38, 38, 0.2)'}`,

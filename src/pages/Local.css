@@ -59,4 +59,20 @@
   .content {
     padding: 20px;
   }
+}
+
+/* React-RND Styles - COMPLETAMENTE LIBRE */
+.react-draggable {
+  cursor: grab;
+  transition: box-shadow 0.2s ease;
+}
+
+.react-draggable:active {
+  cursor: grabbing;
+  z-index: 100 !important;
+  box-shadow: 0 20px 60px rgba(147, 112, 219, 0.5) !important;
+}
+
+.react-draggable:hover {
+  z-index: 10;
 } 

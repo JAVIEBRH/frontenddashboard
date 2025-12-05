@@ -21,22 +21,29 @@ const LitrosCard = ({
   return (
     <div style={{
       background: theme.palette.mode === 'dark' 
-        ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+        ? 'linear-gradient(135deg, #0a0a0a 0%, #000000 50%, #000000 100%)'
         : 'linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)',
       borderRadius: 16,
       padding: 28,
       color: theme.palette.text.primary,
       boxShadow: theme.palette.mode === 'dark' 
-        ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+        ? '0 4px 30px rgba(0, 191, 255, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)'
         : '0 4px 20px rgba(0, 0, 0, 0.08)',
-      transition: 'all 0.3s ease',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
       cursor: 'pointer',
       minHeight: 180,
       border: `1px solid ${theme.palette.mode === 'dark' 
-        ? 'rgba(147, 112, 219, 0.2)' 
-        : 'rgba(147, 112, 219, 0.1)'}`,
+        ? 'rgba(0, 191, 255, 0.4)' 
+        : 'rgba(0, 191, 255, 0.1)'}`,
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      '&:hover': {
+        transform: 'translateY(-2px) scale(1.01)',
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 12px 40px rgba(0, 191, 255, 0.4), 0 0 60px rgba(0, 191, 255, 0.2)'
+          : '0 12px 40px rgba(0, 0, 0, 0.15)',
+        borderColor: 'rgba(0, 191, 255, 0.6)'
+      }
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div style={{ flex: 1 }}>
@@ -69,7 +76,7 @@ const LitrosCard = ({
           </div>
           <div style={{ 
             fontSize: '0.875rem', 
-            color: theme.palette.text.secondary,
+            color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#1a1a1a',
             fontWeight: 500,
             fontFamily: '"Inter", "Roboto", "Helvetica Neue", Arial, sans-serif',
             WebkitFontSmoothing: 'antialiased',
@@ -81,8 +88,8 @@ const LitrosCard = ({
         </div>
         <div style={{
           background: theme.palette.mode === 'dark' 
-            ? 'rgba(147, 112, 219, 0.2)' 
-            : 'rgba(147, 112, 219, 0.1)',
+            ? 'rgba(0, 191, 255, 0.2)' 
+            : 'rgba(0, 191, 255, 0.1)',
           borderRadius: 12,
           padding: '8px 12px',
           fontSize: '0.875rem',

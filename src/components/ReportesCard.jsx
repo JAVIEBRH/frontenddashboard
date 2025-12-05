@@ -99,7 +99,7 @@ const ReportesCard = () => {
     return (
       <Box sx={{ 
         background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+          ? 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)'
           : 'linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)',
         borderRadius: 16,
         padding: 20,
@@ -121,13 +121,13 @@ const ReportesCard = () => {
     <>
       <Box sx={{
         background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+          ? 'linear-gradient(135deg, #0a0a0a 0%, #000000 100%)'
           : 'linear-gradient(135deg, #f8f9ff 0%, #e8eaff 100%)',
         borderRadius: 16,
         padding: 20,
         border: `1px solid ${theme.palette.mode === 'dark' 
-          ? 'rgba(147, 112, 219, 0.2)' 
-          : 'rgba(147, 112, 219, 0.1)'}`,
+          ? 'rgba(0, 191, 255, 0.2)' 
+          : 'rgba(0, 191, 255, 0.1)'}`,
         transition: 'all 0.3s ease',
         height: '100%',
         display: 'flex',

@@ -37,13 +37,59 @@ html {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* Dark mode scrollbar */
+/* Dark mode scrollbar - High Contrast */
 [data-mui-color-scheme="dark"] ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 191, 255, 0.5);
+  border: 1px solid rgba(0, 191, 255, 0.8);
 }
 
 [data-mui-color-scheme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 191, 255, 0.8);
+  border: 1px solid rgba(0, 191, 255, 1);
+}
+
+/* High Contrast Dark Theme - Global Styles */
+[data-mui-color-scheme="dark"] {
+  /* Porcentajes y números - Alto contraste */
+  --high-contrast-cyan: #00ffff;
+  --high-contrast-green: #00ff7f;
+  --high-contrast-pink: #ff1493;
+  --high-contrast-yellow: #ffff00;
+  --high-contrast-blue: #00bfff;
+  --high-contrast-white: #ffffff;
+}
+
+/* Estilos para porcentajes en modo oscuro */
+[data-mui-color-scheme="dark"] .percentage,
+[data-mui-color-scheme="dark"] .number-highlight,
+[data-mui-color-scheme="dark"] [class*="percentage"],
+[data-mui-color-scheme="dark"] [class*="Number"] {
+  color: var(--high-contrast-cyan) !important;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* Títulos en modo oscuro - Alto contraste */
+[data-mui-color-scheme="dark"] h1,
+[data-mui-color-scheme="dark"] h2,
+[data-mui-color-scheme="dark"] h3,
+[data-mui-color-scheme="dark"] h4,
+[data-mui-color-scheme="dark"] h5,
+[data-mui-color-scheme="dark"] h6 {
+  color: var(--high-contrast-white) !important;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+/* Focus styles - Alto contraste */
+[data-mui-color-scheme="dark"] *:focus {
+  outline: 2px solid var(--high-contrast-cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+/* Selection styles - Alto contraste */
+[data-mui-color-scheme="dark"] ::selection {
+  background-color: var(--high-contrast-cyan);
+  color: #000000;
 }
 
 /* Animations */

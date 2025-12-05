@@ -42,52 +42,52 @@ function App() {
     palette: {
       mode: darkMode ? 'dark' : 'light',
       primary: {
-        main: '#3b82f6',
-        light: '#60a5fa',
-        dark: '#2563eb',
+        main: darkMode ? '#00bfff' : '#3b82f6', // Cyan brillante en modo oscuro
+        light: darkMode ? '#1e90ff' : '#60a5fa',
+        dark: darkMode ? '#0099cc' : '#2563eb',
       },
       secondary: {
-        main: '#10b981',
-        light: '#34d399',
-        dark: '#059669',
+        main: darkMode ? '#00ff7f' : '#10b981', // Verde brillante en modo oscuro
+        light: darkMode ? '#32cd32' : '#34d399',
+        dark: darkMode ? '#00cc66' : '#059669',
       },
-      // Paleta de colores mejorada para alertas y estados
+      // Paleta de colores High Contrast para alertas y estados
       error: {
-        main: darkMode ? '#fca5a5' : '#7c2d12',
-        light: darkMode ? '#fecaca' : '#fed7aa',
-        dark: darkMode ? '#f87171' : '#92400e',
+        main: darkMode ? '#ff1493' : '#7c2d12', // Rosa/Magenta brillante
+        light: darkMode ? '#ff69b4' : '#fed7aa',
+        dark: darkMode ? '#ff0066' : '#92400e',
       },
       warning: {
-        main: darkMode ? '#fbbf24' : '#92400e',
-        light: darkMode ? '#fde68a' : '#fef3c7',
-        dark: darkMode ? '#f59e0b' : '#78350f',
+        main: darkMode ? '#ffff00' : '#92400e', // Amarillo brillante
+        light: darkMode ? '#ffd700' : '#fef3c7',
+        dark: darkMode ? '#ffcc00' : '#78350f',
       },
       info: {
-        main: darkMode ? '#60a5fa' : '#1e40af',
-        light: darkMode ? '#93c5fd' : '#dbeafe',
-        dark: darkMode ? '#3b82f6' : '#1e3a8a',
+        main: darkMode ? '#00ffff' : '#1e40af', // Cian brillante
+        light: darkMode ? '#1e90ff' : '#dbeafe',
+        dark: darkMode ? '#0099cc' : '#1e3a8a',
       },
       success: {
-        main: darkMode ? '#34d399' : '#059669',
-        light: darkMode ? '#6ee7b7' : '#d1fae5',
-        dark: darkMode ? '#10b981' : '#047857',
+        main: darkMode ? '#00ff7f' : '#059669', // Verde brillante
+        light: darkMode ? '#32cd32' : '#d1fae5',
+        dark: darkMode ? '#00cc66' : '#047857',
       },
       background: {
-        default: darkMode ? '#0f172a' : '#f8fafc',
-        paper: darkMode ? '#1e293b' : '#ffffff',
+        default: darkMode ? '#000000' : '#f8fafc', // Negro puro para alto contraste
+        paper: darkMode ? '#0a0a0a' : '#ffffff', // Casi negro para cards
       },
       text: {
-        primary: darkMode ? '#f1f5f9' : '#1e293b',
-        secondary: darkMode ? '#94a3b8' : '#64748b',
+        primary: darkMode ? '#ffffff' : '#1e293b', // Blanco puro para máximo contraste
+        secondary: darkMode ? '#e0e0e0' : '#64748b', // Gris muy claro
       },
-      divider: darkMode ? '#334155' : '#e2e8f0',
-      // Colores personalizados para estados
+      divider: darkMode ? '#333333' : '#e2e8f0',
+      // Colores personalizados High Contrast para estados
       custom: {
-        critical: darkMode ? '#fca5a5' : '#7c2d12',
-        warning: darkMode ? '#fbbf24' : '#92400e',
-        info: darkMode ? '#60a5fa' : '#1e40af',
-        success: darkMode ? '#34d399' : '#059669',
-        neutral: darkMode ? '#94a3b8' : '#6b7280',
+        critical: darkMode ? '#ff1493' : '#7c2d12', // Rosa brillante
+        warning: darkMode ? '#ffff00' : '#92400e', // Amarillo brillante
+        info: darkMode ? '#00ffff' : '#1e40af', // Cian brillante
+        success: darkMode ? '#00ff7f' : '#059669', // Verde brillante
+        neutral: darkMode ? '#ffffff' : '#6b7280', // Blanco para máximo contraste
       },
     },
     typography: {
@@ -161,14 +161,16 @@ function App() {
         styleOverrides: {
           root: {
             boxShadow: darkMode 
-              ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
+              ? '0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.1)'
               : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
             transition: 'all 0.3s ease-in-out',
+            border: darkMode ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
             '&:hover': {
               boxShadow: darkMode 
-                ? '0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3)'
+                ? '0 10px 15px -3px rgba(0, 191, 255, 0.3), 0 4px 6px -2px rgba(0, 191, 255, 0.2), 0 0 0 1px rgba(0, 191, 255, 0.5)'
                 : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
               transform: 'translateY(-2px)',
+              border: darkMode ? '1px solid rgba(0, 191, 255, 0.5)' : 'none',
             },
           },
         },
@@ -191,6 +193,36 @@ function App() {
           root: {
             borderRadius: 6,
             fontWeight: 500,
+            color: darkMode ? '#ffffff' : undefined,
+            border: darkMode ? '1px solid rgba(255, 255, 255, 0.3)' : undefined,
+          },
+        },
+      },
+      MuiTypography: {
+        styleOverrides: {
+          h1: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 700,
+          },
+          h2: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 600,
+          },
+          h3: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 600,
+          },
+          h4: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 600,
+          },
+          h5: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 600,
+          },
+          h6: {
+            color: darkMode ? '#ffffff' : undefined,
+            fontWeight: 600,
           },
         },
       },
@@ -207,7 +239,8 @@ function App() {
     return (
       <Box sx={{ 
         display: 'flex', 
-        minHeight: '100vh',
+        height: '100vh',
+        overflow: 'hidden',
         bgcolor: 'background.default',
         transition: 'all 0.3s ease-in-out'
       }}>
@@ -225,8 +258,12 @@ function App() {
             flexGrow: 1,
             transition: 'all 0.3s ease-in-out',
             marginLeft: sidebarOpen ? '240px' : '64px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            height: '100vh',
             '@media (max-width: 768px)': {
               marginLeft: 0,
+              paddingTop: '64px', // Espacio para el AppBar móvil
             },
           }}
         >

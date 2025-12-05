@@ -37,11 +37,11 @@ const InsightTooltip = ({ title, children, placement = 'top' }) => {
         },
       }}
     >
-      <Typography
+      <Box
         component="div"
         sx={{
           fontSize: '0.95rem',
-          lineHeight: 1.7,
+          lineHeight: 1.9,
           color: theme.palette.text.primary,
           fontWeight: 500,
           whiteSpace: 'pre-line',
@@ -51,8 +51,212 @@ const InsightTooltip = ({ title, children, placement = 'top' }) => {
           textRendering: 'optimizeLegibility',
         }}
       >
-        {title}
-      </Typography>
+        {typeof title === 'string' ? (
+          title.split('\n').map((line, index) => {
+            const trimmedLine = line.trim();
+            
+            // Líneas vacías
+            if (!trimmedLine) {
+              return <br key={index} />;
+            }
+            
+            // Títulos principales (empiezan con emoji y mayúsculas)
+            if (/^[💰📊📅💵🏪🚚💡✅⚠️📈📉]/.test(trimmedLine) && /^[A-Z]/.test(trimmedLine.substring(1).trim())) {
+              return (
+                <Typography
+                  key={index}
+                  sx={{
+                    fontSize: '1.15rem',
+                    fontWeight: 900,
+                    color: theme.palette.mode === 'dark' ? '#a855f7' : '#7c3aed',
+                    marginBottom: '10px',
+                    marginTop: index > 0 ? '12px' : '0',
+                    display: 'block',
+                    textShadow: theme.palette.mode === 'dark' 
+                      ? '0 0 12px rgba(168, 85, 247, 0.6)' 
+                      : '0 2px 4px rgba(124, 58, 237, 0.2)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {trimmedLine}
+                </Typography>
+              );
+            }
+            
+            // Secciones (empiezan con emoji y tienen dos espacios)
+            if (/^  [🏪🚚📅📊💡]/.test(line)) {
+              return (
+                <Typography
+                  key={index}
+                  sx={{
+                    fontSize: '1rem',
+                    fontWeight: 800,
+                    color: theme.palette.mode === 'dark' ? '#c084fc' : '#a855f7',
+                    marginTop: '10px',
+                    marginBottom: '6px',
+                    display: 'block',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {trimmedLine}
+                </Typography>
+              );
+            }
+            
+            // Función para obtener color según el tipo de métrica
+            const obtenerColorMetrica = (texto) => {
+              const textoLower = texto.toLowerCase();
+              // Ventas - Verde-azul (turquesa → verde esmeralda)
+              if (textoLower.includes('venta') || textoLower.includes('ventas') || textoLower.includes('ingreso')) {
+                return {
+                  color: theme.palette.mode === 'dark' ? '#22d3ee' : '#059669',
+                  bgColor: theme.palette.mode === 'dark' ? 'rgba(34, 211, 238, 0.15)' : 'rgba(5, 150, 105, 0.1)',
+                  shadow: theme.palette.mode === 'dark' 
+                    ? '0 0 10px rgba(34, 211, 238, 0.6)' 
+                    : '0 1px 3px rgba(5, 150, 105, 0.4)',
+                };
+              }
+              // Costos - Naranja-rojo
+              if (textoLower.includes('costo') || textoLower.includes('costos') || textoLower.includes('gasto')) {
+                return {
+                  color: theme.palette.mode === 'dark' ? '#fb923c' : '#ea580c',
+                  bgColor: theme.palette.mode === 'dark' ? 'rgba(251, 146, 60, 0.15)' : 'rgba(234, 88, 12, 0.1)',
+                  shadow: theme.palette.mode === 'dark' 
+                    ? '0 0 10px rgba(251, 146, 60, 0.6)' 
+                    : '0 1px 3px rgba(234, 88, 12, 0.4)',
+                };
+              }
+              // Utilidad - Púrpura-azul
+              if (textoLower.includes('utilidad') || textoLower.includes('ganancia') || textoLower.includes('beneficio')) {
+                return {
+                  color: theme.palette.mode === 'dark' ? '#a855f7' : '#7c3aed',
+                  bgColor: theme.palette.mode === 'dark' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(124, 58, 237, 0.1)',
+                  shadow: theme.palette.mode === 'dark' 
+                    ? '0 0 10px rgba(168, 85, 247, 0.6)' 
+                    : '0 1px 3px rgba(124, 58, 237, 0.4)',
+                };
+              }
+              // Por defecto - turquesa (valor genérico)
+              return {
+                color: theme.palette.mode === 'dark' ? '#22d3ee' : '#059669',
+                bgColor: theme.palette.mode === 'dark' ? 'rgba(34, 211, 238, 0.1)' : 'rgba(5, 150, 105, 0.08)',
+                shadow: theme.palette.mode === 'dark' 
+                  ? '0 0 10px rgba(34, 211, 238, 0.5)' 
+                  : '0 1px 3px rgba(5, 150, 105, 0.3)',
+              };
+            };
+
+            // Líneas con valores monetarios o números
+            if (/\$[\d,]+|[\d,]+[KM]|N\/A/.test(trimmedLine)) {
+              const partes = trimmedLine.split(/(\$[\d,]+\.?\d*[KM]?|[\d,]+\.?\d*[KM]?|N\/A)/);
+              const colorMetrica = obtenerColorMetrica(trimmedLine);
+              
+              return (
+                <Typography
+                  key={index}
+                  component="div"
+                  sx={{
+                    fontSize: '0.9rem',
+                    marginBottom: '4px',
+                  }}
+                >
+                  {partes.map((part, partIndex) => {
+                    if (/\$[\d,]+\.?\d*[KM]?|[\d,]+\.?\d*[KM]?|N\/A/.test(part)) {
+                      return (
+                        <Box
+                          key={partIndex}
+                          component="span"
+                          sx={{
+                            fontSize: '1.05rem',
+                            fontWeight: 900,
+                            color: colorMetrica.color,
+                            textShadow: colorMetrica.shadow,
+                            padding: '0 4px',
+                            backgroundColor: colorMetrica.bgColor,
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {part}
+                        </Box>
+                      );
+                    }
+                    if (part.trim() && part.includes(':')) {
+                      const [label, ...rest] = part.split(':');
+                      const colorLabel = obtenerColorMetrica(label);
+                      return (
+                        <span key={partIndex}>
+                          <Box
+                            component="span"
+                            sx={{
+                              fontSize: '0.9rem',
+                              fontWeight: 700,
+                              color: colorLabel.color,
+                              marginRight: '4px',
+                            }}
+                          >
+                            {label}:
+                          </Box>
+                          {rest.join(':')}
+                        </span>
+                      );
+                    }
+                    return (
+                      <Box
+                        key={partIndex}
+                        component="span"
+                        sx={{
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          color: theme.palette.text.secondary,
+                        }}
+                      >
+                        {part}
+                      </Box>
+                    );
+                  })}
+                </Typography>
+              );
+            }
+            
+            // Líneas que mencionan Ventas, Costos o Utilidad sin valores
+            if (/venta|ingreso|ingresos|costo|costos|gasto|utilidad|ganancia|beneficio/i.test(trimmedLine)) {
+              const colorMetrica = obtenerColorMetrica(trimmedLine);
+              return (
+                <Typography
+                  key={index}
+                  sx={{
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    color: colorMetrica.color,
+                    marginBottom: '4px',
+                    textShadow: colorMetrica.shadow,
+                  }}
+                >
+                  {trimmedLine}
+                </Typography>
+              );
+            }
+            
+            // Líneas normales
+            return (
+              <Typography
+                key={index}
+                sx={{
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  color: theme.palette.text.secondary,
+                  marginBottom: '3px',
+                }}
+              >
+                {line}
+              </Typography>
+            );
+          })
+        ) : (
+          title
+        )}
+      </Box>
     </Box>
   );
 

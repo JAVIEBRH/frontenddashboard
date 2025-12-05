@@ -246,4 +246,87 @@
 
 .home-container::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+/* Estilos para handles de resize de react-rnd */
+.react-draggable-dragging {
+  z-index: 10000 !important;
+}
+
+/* Handles de resize - siempre funcionales, visibles al hover */
+.react-resizable-handle {
+  position: absolute !important;
+  opacity: 0.3 !important;
+  transition: opacity 0.2s ease !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+/* Mostrar handles cuando el contenedor Rnd tiene hover */
+.react-draggable:hover .react-resizable-handle {
+  opacity: 1 !important;
+}
+
+/* Asegurar que los handles siempre sean clickeables */
+.react-resizable-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: auto !important;
+}
+
+/* Handles de esquinas - más grandes y visibles */
+.react-resizable-handle-se,
+.react-resizable-handle-sw,
+.react-resizable-handle-nw,
+.react-resizable-handle-ne {
+  width: 24px !important;
+  height: 24px !important;
+  background-color: rgba(0, 191, 255, 0.8) !important;
+  border: 2px solid rgba(0, 191, 255, 1) !important;
+  border-radius: 4px !important;
+  cursor: nwse-resize !important;
+  pointer-events: auto !important;
+}
+
+.react-resizable-handle-sw {
+  cursor: nesw-resize !important;
+}
+
+.react-resizable-handle-se:hover,
+.react-resizable-handle-sw:hover,
+.react-resizable-handle-nw:hover,
+.react-resizable-handle-ne:hover {
+  background-color: rgba(0, 191, 255, 1) !important;
+  transform: scale(1.2) !important;
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.9) !important;
+}
+
+/* Handles de bordes */
+.react-resizable-handle-e,
+.react-resizable-handle-w {
+  width: 12px !important;
+  background-color: rgba(0, 191, 255, 0.7) !important;
+  cursor: ew-resize !important;
+  pointer-events: auto !important;
+}
+
+.react-resizable-handle-s,
+.react-resizable-handle-n {
+  height: 12px !important;
+  background-color: rgba(0, 191, 255, 0.7) !important;
+  cursor: ns-resize !important;
+  pointer-events: auto !important;
+}
+
+.react-resizable-handle-e:hover,
+.react-resizable-handle-w:hover,
+.react-resizable-handle-s:hover,
+.react-resizable-handle-n:hover {
+  background-color: rgba(0, 191, 255, 1) !important;
+  box-shadow: 0 0 10px rgba(0, 191, 255, 0.8) !important;
 } 
